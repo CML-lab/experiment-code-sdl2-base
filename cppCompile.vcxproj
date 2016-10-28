@@ -1,0 +1,121 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{A93C22F3-6127-4101-802E-D7154B6AAE22}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>cppCompile</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(ProjectDir)\trakSTAR;$(ProjectDir)\FTDI;$(ProjectDir)\SDL-1.2.15\include;$(ProjectDir)\Flock_of_Birds;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)\trakSTAR;$(ProjectDir)\SDL-1.2.15\lib\x86;$(ProjectDir)\FTDI\i386;$(ProjectDir)\Flock_of_Birds;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(ProjectDir)\FTDI;$(SourcePath)</SourcePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)\trakSTAR;$(ProjectDir)\SDL-1.2.15\include;$(ProjectDir)\FTDI;$(ProjectDir)\Flock_of_Birds;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(ProjectDir)\trakSTAR;$(ProjectDir)\SDL-1.2.15\lib\x86;$(ProjectDir)\FTDI\i386;$(ProjectDir)\Flock_of_Birds;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;glu32.lib;SDL.lib;SDLmain.lib;SDL_mixer.lib;SDL_ttf.lib;SDL_image.lib;Bird.lib;ftd2xx.lib;ATC3DG.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="Circle.h" />
+    <ClInclude Include="config.h" />
+    <ClInclude Include="DataWriter.h" />
+    <ClInclude Include="FTDI\FTDI.h" />
+    <ClInclude Include="HandCursor.h" />
+    <ClInclude Include="Image.h" />
+    <ClInclude Include="InputFrame.h" />
+    <ClInclude Include="JoystickInput.h" />
+    <ClInclude Include="MouseInput.h" />
+    <ClInclude Include="Object2D.h" />
+    <ClInclude Include="Path2D.h" />
+    <ClInclude Include="Region2D.h" />
+    <ClInclude Include="Sound.h" />
+    <ClInclude Include="SpeedBar.h" />
+    <ClInclude Include="TargetFrame.h" />
+    <ClInclude Include="Timer.h" />
+    <ClInclude Include="TrackBird.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Circle.cpp" />
+    <ClCompile Include="DataWriter.cpp" />
+    <ClCompile Include="FTDI\FTDI.cpp" />
+    <ClCompile Include="HandCursor.cpp" />
+    <ClCompile Include="Image.cpp" />
+    <ClCompile Include="JoystickInput.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="MouseInput.cpp" />
+    <ClCompile Include="Object2D.cpp" />
+    <ClCompile Include="Path2D.cpp" />
+    <ClCompile Include="Region2D.cpp" />
+    <ClCompile Include="Sound.cpp" />
+    <ClCompile Include="SpeedBar.cpp" />
+    <ClCompile Include="Timer.cpp" />
+    <ClCompile Include="TrackBird.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

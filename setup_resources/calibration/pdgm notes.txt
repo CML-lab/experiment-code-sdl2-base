@@ -1,0 +1,5 @@
+paradigm notes:
+
+updated version (with enforced random rxn time btwn tgts in the sequence) feels unnatural and does not really encourage sequence learning.  the iti is too large, maybe, or else the isi is too small?  movements no longer feel fluid.  it seems to help if i remove the start beep between movements within the sequence, so that the start beep only cues the beginning of the sequence.
+
+velocity threshold seems to be useful, although it reacts a little strangely at times?  seems better if i update the game loop after i poll the flock of birds for an updated hand position, and immediately update the screen afterward.

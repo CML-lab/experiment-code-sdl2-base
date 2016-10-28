@@ -1,0 +1,11 @@
+Debug/*
+!Debug/*.dll
+ipch/
+Release/
+main_*
+Data/
+*.dat
+*.sdf
+*.suo
+*.user
+*.opensdf
