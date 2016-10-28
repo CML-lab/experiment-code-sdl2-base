@@ -13,7 +13,6 @@
 int TrackBird::InitializeBird(TrackSYSCONFIG *sysconfig)
 {
 
-	int temp;
 	TrackSYSCONFIG sysconfigstatus;
 
 	//initialize general constants
@@ -59,7 +58,7 @@ int TrackBird::InitializeBird(TrackSYSCONFIG *sysconfig)
 			//set up system configuration - must do this BEFORE starting to stream
 			birdGetSystemConfig(sysconfig->groupID, &fob_sysconfig); //get defaults
 			fob_sysconfig.dMeasurementRate = sysconfig->measureRate;  //edit sampling rate
-			temp = birdSetSystemConfig(sysconfig->groupID, &fob_sysconfig); //set sampling rate
+			birdSetSystemConfig(sysconfig->groupID, &fob_sysconfig); //set sampling rate
 			birdGetSystemConfig(sysconfig->groupID, &fob_sysconfig); //re-update saved values
 			sysconfig->measureRate = fob_sysconfig.dMeasurementRate;
 			std::cerr << "FOB Sampling Rate: " << sysconfig->measureRate << std::endl;
