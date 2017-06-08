@@ -3,17 +3,10 @@
 #include "Circle.h"
 #include "config.h"
 
-HandCursor::HandCursor(Circle* c)
+HandCursor::HandCursor(GLfloat x, GLfloat y, GLfloat diam, GLfloat clr[]) : Circle(x, y, diam, clr)
 {
-	circ = c;
-	circ->On();
-
-	yvel = 0;
-	xvel = 0;
-	xpos = 0;
-	ypos = 0;
-	x0 = .5;
-	y0 = .5;
+	x0 = PHYSICAL_WIDTH/2;  //initialize to the center of the screen
+	y0 = PHYSICAL_HEIGHT/2; //initialize to the center of the screen
 	xgain = 1;
 	ygain = 1;
 
@@ -35,25 +28,16 @@ HandCursor::HandCursor(Circle* c)
 	}
 }
 
-void HandCursor::Draw()
-{
-	circ->Draw();
-}
-
-GLint HandCursor::drawState()
-{
-	return circ->drawState();
-}
-
 void HandCursor::UpdatePos(GLfloat x, GLfloat y)
 {
 
-	GLfloat xScr, yScr;
+	GLfloat xTrue, yTrue;
 
-	xpos = x;
-	ypos = y;
+	//store the true hand position (which is the input to this function)
+	xTrue = x;
+	yTrue = y;
 
-	for (int i = (NCHIST - 1); i > 0; i--)
+	for (int i = (NCHIST - 1); i > 0; i--)	//update the true hand position history
 	{
 		xhist[i] = xhist[i - 1];
 		yhist[i] = yhist[i - 1];
@@ -61,7 +45,7 @@ void HandCursor::UpdatePos(GLfloat x, GLfloat y)
 	xhist[0] = x;
 	yhist[0] = y;
 
-	//---- Estimate velocity as slope of last 5 observations ----
+	//---- Estimate true hand velocity (non-distorted) as slope of last 5 observations ----
 	// get mean
 	GLfloat xmean = 0;
 	GLfloat ymean = 0;
@@ -77,30 +61,34 @@ void HandCursor::UpdatePos(GLfloat x, GLfloat y)
 	xvel = (-2*xhist[4] -1*xhist[3] + 1*xhist[1] + 2*xhist[0])*SAMPRATE/10;
 	yvel = (-2*yhist[4] -1*yhist[3] + 1*yhist[1] + 2*yhist[0])*SAMPRATE/10;
 
+	//set the circle xpos and ypos. this is initially set as the true value, then modified as necessary
+	xpos = xTrue;
+	ypos = yTrue;
+
 
 	if(clamp)
 	{
-		GLfloat r = sqrtf((x - x0)*(x - x0) + (y - y0)*(y - y0));
+		GLfloat r = sqrtf((xpos - x0)*(xpos - x0) + (ypos - y0)*(ypos - y0));
 		if(1)
 		{
-			xScr = r*sin(thetaClamp) + x0;
-			yScr = r*cos(thetaClamp) + y0;
+			xpos = r*sin(thetaClamp) + x0;
+			ypos = r*cos(thetaClamp) + y0;
 		}
 		else
 		{
-			xScr = -r*sin(thetaClamp) + x0;
-			yScr = -r*cos(thetaClamp) + y0;
+			xpos = -r*sin(thetaClamp) + x0;
+			ypos = -r*cos(thetaClamp) + y0;
 		}
 	}
 	else
 	{
 		// apply rotation
-		xScr = rotMat[0]*(x - x0) + rotMat[1]*(y - y0) + x0;
-		yScr = rotMat[2]*(x - x0) + rotMat[3]*(y - y0) + y0;
+		xpos = rotMat[0]*(xpos - x0) + rotMat[1]*(ypos - y0) + x0;
+		ypos = rotMat[2]*(xpos - x0) + rotMat[3]*(ypos - y0) + y0;
 
 		// apply gain
-		xScr = xgain*(xScr - x0) + x0;
-		yScr = ygain*(yScr - y0) + y0;
+		xpos = xgain*(xpos - x0) + x0;
+		ypos = ygain*(ypos - y0) + y0;
 	}
 
 	for (int i = (NCHIST - 1); i > 0; i--)
@@ -108,20 +96,20 @@ void HandCursor::UpdatePos(GLfloat x, GLfloat y)
 		xhistScr[i] = xhistScr[i - 1];
 		yhistScr[i] = yhistScr[i - 1];
 	}
-	xhistScr[0] = xScr;
-	yhistScr[0] = yScr;
+	xhistScr[0] = xpos;
+	yhistScr[0] = ypos;
 
-	circ->SetPos(xScr, yScr);
+	MakeVerts();
 }
 
 GLfloat HandCursor::GetTrueX()
 {
-	return xpos;
+	return xTrue;
 }
 
 GLfloat HandCursor::GetTrueY()
 {
-	return ypos;
+	return yTrue;
 }
 
 GLfloat HandCursor::GetLastX()
@@ -150,27 +138,32 @@ void HandCursor::SetOrigin(GLfloat x, GLfloat y)
 
 GLfloat HandCursor::GetXVel()
 {
-	return xvel;
+	return xvel;  //return the true hand velocity (non-distorted)
 }
 
 GLfloat HandCursor::GetYVel()
 {
-	return yvel;
+	return yvel;  //return the true hand velocity (non-distorted)
+}
+
+GLfloat HandCursor::GetVel()
+{
+	return sqrtf(xvel*xvel + yvel*yvel);   //return the true hand velocity (non-distorted)
 }
 
 GLfloat HandCursor::Distance(GLfloat x, GLfloat y)
 {
-	return sqrtf(powf(circ->GetX() - x, 2.0f) + powf(circ->GetY() - y, 2.0f));
+	return sqrtf(powf(xpos - x, 2.0f) + powf(ypos - y, 2.0f));
 }
 
 GLfloat HandCursor::Distance(Circle* c)
 {
-	return sqrtf(powf(circ->GetX() - c->GetX(), 2.0f) + powf(circ->GetY() - c->GetY(),2.0f));
+	return sqrtf(powf(xpos - c->GetX(), 2.0f) + powf(ypos - c->GetY(),2.0f));
 }
 
 GLfloat HandCursor::Distance(Object2D* obj)
 {
-	return sqrtf(powf(circ->GetX() - obj->GetX(), 2.0f) + powf(circ->GetY() - obj->GetY(),2.0f));
+	return sqrtf(powf(xpos - obj->GetX(), 2.0f) + powf(ypos - obj->GetY(),2.0f));
 }
 
 
@@ -199,36 +192,10 @@ void HandCursor::ClampOff()
 	clamp = 0;
 }
 
-void HandCursor::On()
-{
-	circ->On();
-}
-
-void HandCursor::Off()
-{
-	circ->Off();
-}
-
-GLfloat HandCursor::GetX()
-{
-	return circ->GetX();
-}
-
-GLfloat HandCursor::GetY()
-{
-	return circ->GetY();
-}
-
-GLfloat HandCursor::GetVel()
-{
-	return sqrtf(xvel*xvel + yvel*yvel);
-}
-
 GLfloat HandCursor::GetHitMargin()
 {
 	return hitMargin;
 }
-
 
 void HandCursor::SetHitMargin(GLfloat m)
 {
@@ -276,8 +243,3 @@ void HandCursor::SetGain(GLfloat xg, GLfloat yg)
 	ygain = yg;
 }
 
-
-void HandCursor::SetColor(GLfloat clr[])
-{
-	circ->SetColor(clr);
-}

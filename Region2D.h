@@ -15,6 +15,7 @@ private:
 	GLfloat Vertices[10][2];  //vertices in meters from the origin (bottom left corner of the screen)
 	GLfloat color[3];  //rgb array, with range 0-1
 	GLfloat borderColor[3];  //rgb array, with range 0-1
+	GLfloat borderWidth;
 	GLint drawOn;
 	GLint borderOn;
 	GLfloat xcenter;
@@ -26,16 +27,21 @@ public:
 	
 	GLfloat GetRegionVert(GLint i, GLint j);	// Gets a requsted polygon vertex
 	GLint GetRegionSides();					// Gets number of sides of the polygon
-	GLfloat GetRectWidth();					// Gets width, for rectangular polygon
-	GLfloat GetRectHeight();				// Gets height, for rectangular polygon
-	
+	GLfloat GetRegionCenterX();				// Gets center X of the polygon
+	GLfloat GetRegionCenterY();				// Gets center Y of the polygon
+
 	void SetNSides(GLint sides);			//set the number of sides in the polygon
 	void SetOneVert(GLint i, GLint j, GLfloat vert);	// Sets one polygon vertex of the object (in meters)
 	void SetRegionCenter(GLfloat centerx, GLfloat centery);		//set the center position of the region
 	void SetRegionVerts(GLfloat Verts[][2]);	// Sets the polygon vertices of the object (in meters)
-	int SetRectDims(GLfloat width, GLfloat height);	// Sets rectangular polygon vertices of the object (in meters) from specified width and heigh
 	void SetRegionColor(GLfloat clr[]);		// Sets the polygon color
 	void SetBorderColor(GLfloat clr[]);		// Sets the polygon color
+	void SetBorderWidth(GLfloat width);		//sets the polygon border width
+
+	int SetRectDims(GLfloat width, GLfloat height);	// Sets rectangular polygon vertices of the object (in meters) from specified width and heigh
+	int SetCenteredRectDims(GLfloat width, GLfloat height); // Sets rectangular polygon vertices of the object (in meters) from specified width and heigh, centered at (0,0)
+	GLfloat GetRectWidth();					// Gets width, for rectangular polygon
+	GLfloat GetRectHeight();				// Gets height, for rectangular polygon
 
 	static Region2D LoadRegionFromFile(char* filePath);	//load polygon from file
 
@@ -51,6 +57,9 @@ public:
 	bool InRegion(Object2D* cursor);
 	bool InRegion(HandCursor* cursor);
 	bool InRegion(GLfloat xcurs, GLfloat ycurs);
+
+	GLfloat Distance(Circle* c);
+	GLfloat Distance(Object2D* c);
 };
 
 #endif

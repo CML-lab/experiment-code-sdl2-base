@@ -54,9 +54,9 @@ enum GameState
 
 
 SDL_Event event;
-SDL_Surface* screen = NULL;
+SDL_Window *screen = NULL;
+SDL_GLContext glcontext = NULL;
 
-Circle* cursor[BIRDCOUNT + 1];
 HandCursor* curs[BIRDCOUNT + 1];
 HandCursor* player = NULL;
 Circle* startCircle = NULL;
@@ -71,7 +71,7 @@ Sound* scorebeep = NULL;
 Sound* errorbeep = NULL;
 TTF_Font* font = NULL;
 TTF_Font* trialnumfont = NULL;
-SDL_Color textColor = {0, 0, 0};
+SDL_Color textColor = {0, 0, 0, 1};
 DataWriter* writer = NULL;
 GameState state;
 Timer* trialTimer;
@@ -331,7 +331,7 @@ bool init()
 	std::cerr << std::endl;
 
 	// Initialize SDL, OpenGL, SDL_mixer, and SDL_ttf
-	if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		std::cerr << "SDL failed to intialize."  << std::endl;
 		return false;
@@ -339,28 +339,41 @@ bool init()
 	else
 		std::cerr << "SDL initialized." << std::endl;
 
-	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP,
-		SDL_OPENGL | (WINDOWED ? 0 : SDL_FULLSCREEN));
+	screen = SDL_CreateWindow("Code Base SDL2",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | (WINDOWED ? 0 : SDL_WINDOW_FULLSCREEN)); //SCREEN_BPP,
+	//note, this call is missing the request to set to 32 bpp. unclear if this is going to be a problem
+
 	if (screen == NULL)
 	{
 		std::cerr << "Screen failed to build." << std::endl;
 		return false;
 	}
 	else
+	{
+		glcontext = SDL_GL_CreateContext(screen);
 		std::cerr << "Screen built." << std::endl;
+	}
 
-	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 0); //disable vsync
+	SDL_GL_SetSwapInterval(0); //ask for immediate updates rather than syncing to vertical retrace
 
 	setup_opengl();
-	//Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 8, 4096);
-	Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 2, 512);
-	if (TTF_Init() == -1)
+
+	a = Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 2, 512);  //initialize SDL_mixer
+	if (a != 0)
 	{
 		std::cerr << "Audio failed to initialize." << std::endl;
 		return false;
 	}
 	else
 		std::cerr << "Audio initialized." << std::endl;
+
+
+	if (TTF_Init() == -1)
+	{
+		std::cerr << "TTF failed to initialize." << std::endl;
+		return false;
+	}
+	else
+		std::cerr << "TTF initialized." << std::endl;
 
 	//turn off the computer cursor
 	SDL_ShowCursor(0);
@@ -511,9 +524,8 @@ bool init()
 		*/
 		for (a = 1; a <= BIRDCOUNT; a++)
 		{
-			cursor[a] = new Circle(curtr.startx, curtr.starty, CURSOR_RADIUS*2, cursColor);
-			cursor[a]->BorderOff();
-			curs[a] = new HandCursor(cursor[a]); 
+			curs[a] = new HandCursor(curtr.startx, curtr.starty, CURSOR_RADIUS*2, cursColor);
+			curs[a]->BorderOff();
 			curs[a]->SetOrigin(curtr.startx, curtr.starty);
 		}
 
@@ -523,8 +535,7 @@ bool init()
 	else
 	{
 		// Use mouse control
-		cursor[0] = new Circle(curtr.startx, curtr.starty, CURSOR_RADIUS*2, cursColor);
-		curs[0] = new HandCursor(cursor[0]);
+		curs[0] = new HandCursor(curtr.startx, curtr.starty, CURSOR_RADIUS*2, cursColor);
 		curs[0]->SetOrigin(curtr.startx, curtr.starty);
 		player = curs[0];
 	}
@@ -553,8 +564,6 @@ bool init()
 	trialnum = new Image(TTF_RenderText_Blended(trialnumfont, "1", textColor));
 	trialnum->On();
 
-
-	SDL_WM_SetCaption("Compiled Code", NULL);
 
 	hoverTimer = new Timer();
 	trialTimer = new Timer();
@@ -609,6 +618,10 @@ void clean_up()
 	delete text;
 
 	delete writer;
+
+	SDL_GL_DeleteContext(glcontext);
+	SDL_DestroyWindow(screen);
+
 	Mix_CloseAudio();
 	TTF_CloseFont(font);
 	TTF_Quit();
@@ -693,7 +706,7 @@ static void draw_screen()
 	//write the trial number
 	trialnum->Draw(PHYSICAL_WIDTH*23/24, PHYSICAL_HEIGHT*23/24);
 
-	SDL_GL_SwapBuffers();
+	SDL_GL_SwapWindow(screen);
 	glFlush();
 
 }

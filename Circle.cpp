@@ -9,10 +9,17 @@
 
 Circle::Circle(GLfloat x, GLfloat y, GLfloat diam, GLfloat clr[])
 {
+	startdiameter = diam;
 	diameter = diam;
 	SetColor(clr);
 	xpos = x;
 	ypos = y;
+	startxpos = x;
+	startypos = y;
+	xvel = 0.0f;
+	yvel = 0.0f;
+	CircTimer.Reset();
+	timerdelay = 0;
 	nVerts = 100;
 	borderWidth = .001f;
 	MakeVerts();
@@ -28,12 +35,14 @@ Circle::Circle(GLfloat x, GLfloat y, GLfloat diam, GLfloat clr[])
 void Circle::SetDiameter(GLfloat diam)
 {
 	diameter = diam;
+	startdiameter = diam;
 	MakeVerts();
 }
 
 void Circle::SetRadius(GLfloat rad)
 {
 	diameter = 2*rad;
+	startdiameter = diameter;
 	MakeVerts();
 }
 
@@ -69,7 +78,29 @@ void Circle::SetPos(GLfloat x, GLfloat y)
 {
 	xpos = x;
 	ypos = y;
+	startxpos = x;
+	startypos = y;
+
 }
+
+void Circle::SetVel(GLfloat vx, GLfloat vy)
+{
+	xvel = vx;
+	yvel = vy;
+}
+
+void Circle::ResetTimer(int delay)
+{
+	CircTimer.Reset();
+	timerdelay = delay;
+}
+
+
+Uint32 Circle::TgtTime()
+{
+	return (CircTimer.Elapsed());
+}
+
 
 void Circle::Draw()
 {
@@ -114,6 +145,19 @@ void Circle::Draw()
 			glEnd();
 			glColor3f(1.0f, 1.0f, 1.0f);
 		}
+	}
+
+}
+
+void Circle::UpdatePos()
+{
+	int dt = int(CircTimer.Elapsed())-timerdelay;
+	
+	if (dt > 0)
+	{
+		xpos = (float(dt)/1000.0f)*xvel + startxpos;
+		ypos = (float(dt)/1000.0f)*yvel + startypos;
+		MakeVerts();
 	}
 
 }
@@ -177,4 +221,24 @@ GLfloat Circle::GetRadius()
 void Circle::SetBorderWidth(GLfloat w)
 {
 	borderWidth = w;
+}
+
+
+bool Circle::Explode(GLfloat ntimes, GLfloat vel, Uint32 refTime)
+{
+
+	Uint32 curTime = SDL_GetTicks();
+
+	diameter = float(curTime-refTime)/1000.0f*vel + startdiameter;
+	if (diameter >= startdiameter*ntimes)
+	{
+		return(true);
+	}
+	else
+	{
+		UpdatePos();
+		//MakeVerts();
+		return(false);
+	}
+
 }
