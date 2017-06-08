@@ -1,6 +1,7 @@
 #include <cmath>
 #include "SDL_image.h"
 #include "Image.h"
+#include <iostream>
 
 Image::Image(SDL_Surface* surface, float ratio)
 {
@@ -215,3 +216,35 @@ int Image::DrawState()
 	return(drawOn);
 }
 
+
+
+Image* Image::ImageText(Image* txt, const char* txtstr, const std::string& fonttype, int fontsize, SDL_Color fontcolor)
+{
+	/* To create text, call a render function from SDL_ttf and use it to create
+	 * an Image object. See http://www.libsdl.org/projects/SDL_ttf/docs/SDL_ttf.html#SEC42
+	 * for a list of render functions.
+	 *
+	 * Note, this method has not been updated for new SDL2 functionality, but it still works.
+	 */
+
+
+	delete txt;
+
+	TTF_Font *font;
+
+	const std::string strdir = "Resources/";
+	const std::string fontstr = strdir + fonttype;
+	std::cerr << fontstr << std::endl;
+
+	font = TTF_OpenFont(fontstr.c_str(), fontsize);
+	std::cerr << font << std::endl;
+
+	txt = new Image(TTF_RenderText_Blended(font, txtstr, fontcolor));
+
+	std::cerr << fontstr << std::endl;
+
+	TTF_CloseFont(font);
+
+	return(txt);
+
+}

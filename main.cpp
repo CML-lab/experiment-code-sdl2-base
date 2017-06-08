@@ -21,6 +21,7 @@
 #include "Sound.h"
 #include "SpeedBar.h"
 #include "Timer.h"
+#include "Image.h"
 
 #include "config.h"
 
@@ -550,20 +551,13 @@ bool init()
 	scorebeep = new Sound("Resources/correctbeep.wav");
 	errorbeep = new Sound("Resources/errorbeep1.wav");
 
-
-	/* To create text, call a render function from SDL_ttf and use it to create
-	 * an Image object. See http://www.libsdl.org/projects/SDL_ttf/docs/SDL_ttf.html#SEC42
-	 * for a list of render functions.
-	 */
-	font = TTF_OpenFont("Resources/arial.ttf", 28);
-
-	text = new Image(TTF_RenderText_Blended(font, " ", textColor));
+	//set up placeholder text
+	text = Image::ImageText(text, " ","arial.ttf", 28, textColor);
 	text->Off();
 
-	trialnumfont = TTF_OpenFont("Resources/arial.ttf", 12);
-	trialnum = new Image(TTF_RenderText_Blended(trialnumfont, "1", textColor));
+	//set up trial number text image
+	trialnum = Image::ImageText(trialnum,"1","arial.ttf", 12,textColor);
 	trialnum->On();
-
 
 	hoverTimer = new Timer();
 	trialTimer = new Timer();
@@ -616,6 +610,7 @@ void clean_up()
 	int status = Ftdi::CloseFtdi(ftHandle,1);
 
 	delete text;
+	delete trialnum;
 
 	delete writer;
 
@@ -720,6 +715,8 @@ bool reachedvelmax = false;
 
 bool mvmtEnded = false;
 bool hitTarget = false;
+bool hitRegion = false;
+bool hitPath = false;
 
 float LastPeakVel = 0;
 bool returntostart = true;
@@ -771,6 +768,7 @@ void game_update()
 			{
 				barrierPaths[a].SetPathColor(grayColor);
 				barrierPaths[a].Off();
+				hitPath = false;
 			}
 
 			//reset and shut off all regions
@@ -778,6 +776,7 @@ void game_update()
 			{
 				barrierRegions[a].SetRegionColor(redColor);
 				barrierRegions[a].Off();
+				hitRegion = false;
 			}
 			
 
@@ -894,12 +893,18 @@ void game_update()
 			}
 
 			//check if the hand intersected the path
-			if (curtr.path >= 0 && barrierPaths[curtr.path].OnPath(player))
+			if (curtr.path >= 0 && barrierPaths[curtr.path].PathCollision(player))
+			{
 				barrierPaths[curtr.path].SetPathColor(orangeColor);
+				hitPath = true;
+			}
 
 			//check if the hand entered the region
 			if (curtr.region >= 0 && barrierRegions[curtr.region].InRegion(player))
+			{
 				barrierRegions[curtr.region].SetRegionColor(orangeColor);
+				hitRegion = true;
+			}
 
 			
 			//check if the player hit the target
@@ -939,7 +944,7 @@ void game_update()
 						  << (hitTarget ? "1" : "0")
 						  << std::endl;
 
-				if (reachedvelmin && !reachedvelmax && hitTarget)  //if the velocity and latency criteria have been satisified and the target has been hit, score the trial
+				if (reachedvelmin && !reachedvelmax && hitTarget && !hitPath && !hitRegion)  //if the velocity and latency criteria have been satisified and the target has been hit, score the trial
 				{
 					score++;     //target score
 					scorebeep->Play();
@@ -988,8 +993,7 @@ void game_update()
 				CurTrial++;
 				std::stringstream texttn;
 				texttn << CurTrial+1;  //CurTrial starts from 0, so we add 1 for convention.
-				delete trialnum;
-				trialnum = new Image(TTF_RenderText_Blended(trialnumfont, texttn.str().c_str(), textColor));
+				trialnum = Image::ImageText(trialnum,texttn.str().c_str(),"arial.ttf", 12,textColor);
 				std::cerr << "Trial " << CurTrial << " ended at " << SDL_GetTicks() << std::endl;
 
 				//if we have reached the end of the trial table, quit
@@ -1034,7 +1038,7 @@ void game_update()
 				scorestring << "You earned " 
 							<< score 
 							<< " points.";
-				text = new Image(TTF_RenderText_Blended(font, scorestring.str().c_str(), textColor));
+				text = Image::ImageText(text, scorestring.str().c_str(), "arial.ttf", 28, textColor);
 
 				writefinalscore = true;
 			}

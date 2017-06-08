@@ -4,6 +4,9 @@
 
 #include "SDL.h"
 #include "config.h"
+#include "SDL_ttf.h"
+#include <string>
+
 
 // Stores an image as an OpenGL texture
 class Image
@@ -20,6 +23,8 @@ public:
 	~Image() { }
 	// Creates an Image object based on the supplied file path and returns a
 	// pointer to the new Image. If the image could not be created, returns null.
+
+	static Image* ImageText(Image* txt, const char* txtstr, const std::string& fonttype, int fontsize, SDL_Color fontcolor);
 
 	static Image* LoadFromFile(char* filePath);
 	// Get the OpenGL texture for this Image
