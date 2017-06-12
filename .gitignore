@@ -9,3 +9,4 @@ Data/
 *.suo
 *.user
 *.opensdf
+*log.txt

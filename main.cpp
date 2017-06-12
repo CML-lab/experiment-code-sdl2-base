@@ -158,6 +158,9 @@ int main(int argc, char* args[])
 {
 	int a = 0;
 
+	//redirect stderr output to a file
+	freopen( "./Debug/errorlog.txt", "w", stderr); 
+
 	std::cerr << "Start main." << std::endl;
 
 	SetPriorityClass(GetCurrentProcess(),ABOVE_NORMAL_PRIORITY_CLASS);
@@ -311,6 +314,7 @@ int LoadTrFile(char *fname)
 //initialization function - set up the experimental environment and load all relevant parameters/files
 bool init()
 {
+
 	// Initialize Flock of Birds
 	/* The program will run differently if the birds fail to initialize, so we
 	 * store it in a bool.
@@ -623,6 +627,8 @@ void clean_up()
 	SDL_Quit();
 	if (trackstatus > 0)
 		TrackBird::ShutDownBird(&sysconfig);
+
+	freopen( "CON", "w", stderr );
 
 }
 
