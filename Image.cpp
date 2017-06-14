@@ -5,6 +5,17 @@
 
 Image::Image(SDL_Surface* surface, float ratio)
 {
+
+	/*This function converts an SDL surface directly to an openGL texture, rather than using the SDL_Renderer.
+	 * 
+	 * "SDL2's accelerated rendering is nothing more than a software wrapper around OpenGL or Direct3D.  
+	 *  By using OpenGL you bypass the wrapper and get to use the underlying API directly, which can 
+	 *  give you more control but at the expense of greater complexity."
+	 * 
+	 */
+
+
+
 	GLenum texture_format;
 	GLint channels;
 

@@ -68,10 +68,9 @@ Path2D barrierPaths[NPATHS];
 Object2D* traces[NTRACES];
 Image* text = NULL;
 Image* trialnum = NULL;
+Sound* startbeep = NULL;
 Sound* scorebeep = NULL;
 Sound* errorbeep = NULL;
-TTF_Font* font = NULL;
-TTF_Font* trialnumfont = NULL;
 SDL_Color textColor = {0, 0, 0, 1};
 DataWriter* writer = NULL;
 GameState state;
@@ -344,6 +343,7 @@ bool init()
 	else
 		std::cerr << "SDL initialized." << std::endl;
 
+
 	screen = SDL_CreateWindow("Code Base SDL2",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | (WINDOWED ? 0 : SDL_WINDOW_FULLSCREEN)); //SCREEN_BPP,
 	//note, this call is missing the request to set to 32 bpp. unclear if this is going to be a problem
 
@@ -372,13 +372,14 @@ bool init()
 		std::cerr << "Audio initialized." << std::endl;
 
 
+	//initialize SDL_TTF (text handling)
 	if (TTF_Init() == -1)
 	{
-		std::cerr << "TTF failed to initialize." << std::endl;
+		std::cerr << "SDL_TTF failed to initialize." << std::endl;
 		return false;
 	}
 	else
-		std::cerr << "TTF initialized." << std::endl;
+		std::cerr << "SDL_TTF initialized." << std::endl;
 
 	//turn off the computer cursor
 	SDL_ShowCursor(0);
@@ -552,7 +553,8 @@ bool init()
 
 
 	//load sound files
-	scorebeep = new Sound("Resources/correctbeep.wav");
+	startbeep = new Sound("Resources/startbeep.wav");
+	scorebeep = new Sound("Resources/coin.wav");
 	errorbeep = new Sound("Resources/errorbeep1.wav");
 
 	//set up placeholder text
@@ -622,7 +624,6 @@ void clean_up()
 	SDL_DestroyWindow(screen);
 
 	Mix_CloseAudio();
-	TTF_CloseFont(font);
 	TTF_Quit();
 	SDL_Quit();
 	if (trackstatus > 0)
@@ -849,6 +850,8 @@ void game_update()
 				}
 
 				trialTimer->Reset();
+
+				startbeep->Play();
 
 				reachedvelmin = false;
 				reachedvelmax = false;
