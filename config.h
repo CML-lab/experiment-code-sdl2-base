@@ -2,7 +2,9 @@
 #define CONFIG_H
 #pragma once
 
+#include "SDL.h"
 #include "SDL_opengl.h"
+#include <vector>
 
 ////////// Set these parameters only! //////////////////////////
 
@@ -49,8 +51,16 @@
 
 
 //screen dimensions
-#define SCREEN_WIDTH  1920
-#define SCREEN_HEIGHT  1080
+//#define SCREEN_WIDTH  1920
+//#define SCREEN_HEIGHT  1080
+extern int SCREEN_WIDTH;
+extern int SCREEN_HEIGHT;
+typedef struct window_data
+{
+    SDL_Rect bounds;
+    SDL_Window *window;
+	SDL_GLContext glcontext;
+} SCREEN_struct;
 
 #if TRACKTYPE == 0
 

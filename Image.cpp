@@ -3,7 +3,8 @@
 #include "Image.h"
 #include <iostream>
 
-Image::Image(SDL_Surface* surface, float ratio)
+
+Image::Image(SDL_Surface* surface, SCREEN_struct scr[], int win, float ratio)
 {
 
 	/*This function converts an SDL surface directly to an openGL texture, rather than using the SDL_Renderer.
@@ -14,7 +15,7 @@ Image::Image(SDL_Surface* surface, float ratio)
 	 * 
 	 */
 
-
+	SDL_GL_MakeCurrent(scr[win].window, scr[win].glcontext);
 
 	GLenum texture_format;
 	GLint channels;
@@ -48,14 +49,15 @@ Image::Image(SDL_Surface* surface, float ratio)
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, channels, surface->w, surface->h, 0, texture_format, GL_UNSIGNED_BYTE, surface->pixels);
+	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glTexImage2D(GL_TEXTURE_2D, 0, channels, surface->w, surface->h, 0, texture_format, GL_UNSIGNED_BYTE, surface->pixels);//
 	width = (GLfloat)surface->w * ratio;
 	height = (GLfloat)surface->h * ratio;
 
 	drawOn = 1;
 }
 
-Image* Image::LoadFromFile(char* filePath)
+Image* Image::LoadFromFile(char* filePath, SCREEN_struct scr[], int win)
 {
 	SDL_Surface* surface = IMG_Load(filePath);
 	if (surface == NULL) // failed to load file
@@ -64,7 +66,7 @@ Image* Image::LoadFromFile(char* filePath)
 	}
 	else
 	{
-		Image* image = new Image(surface);
+		Image* image = new Image(surface, scr, win);
 		SDL_FreeSurface(surface);
 		return image;
 	}
@@ -95,6 +97,8 @@ void Image::Draw(GLfloat xPos, GLfloat yPos, GLfloat w, GLfloat h, GLfloat theta
 
 	if (drawOn)
 	{
+
+		glColor3f(1.0f, 1.0f, 1.0f);
 
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glEnable(GL_TEXTURE_2D);
@@ -229,7 +233,7 @@ int Image::DrawState()
 
 
 
-Image* Image::ImageText(Image* txt, const char* txtstr, const std::string& fonttype, int fontsize, SDL_Color fontcolor)
+Image* Image::ImageText(Image* txt, const char* txtstr, const std::string& fonttype, int fontsize, SDL_Color fontcolor, SCREEN_struct scr[], int win)
 {
 	/* To create text, call a render function from SDL_ttf and use it to create
 	 * an Image object. See http://www.libsdl.org/projects/SDL_ttf/docs/SDL_ttf.html#SEC42
@@ -245,14 +249,14 @@ Image* Image::ImageText(Image* txt, const char* txtstr, const std::string& fontt
 
 	const std::string strdir = "Resources/";
 	const std::string fontstr = strdir + fonttype;
-	std::cerr << fontstr << std::endl;
+	//std::cerr << fontstr << std::endl;
 
 	font = TTF_OpenFont(fontstr.c_str(), fontsize);
-	std::cerr << font << std::endl;
+	//std::cerr << font << std::endl;
 
-	txt = new Image(TTF_RenderText_Blended(font, txtstr, fontcolor));
+	txt = new Image(TTF_RenderText_Blended(font, txtstr, fontcolor), scr, win);
 
-	std::cerr << fontstr << std::endl;
+	//std::cerr << fontstr << std::endl;
 
 	TTF_CloseFont(font);
 

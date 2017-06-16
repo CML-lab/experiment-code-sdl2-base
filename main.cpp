@@ -4,6 +4,7 @@
 #include <fstream>
 #include <istream>
 #include <windows.h>
+#include <vector>
 #include "SDL.h"
 #include "SDL_mixer.h"
 #include "SDL_ttf.h"
@@ -55,8 +56,10 @@ enum GameState
 
 
 SDL_Event event;
-SDL_Window *screen = NULL;
-SDL_GLContext glcontext = NULL;
+int nWindows;
+SCREEN_struct screens[3];
+int SCREEN_WIDTH;
+int SCREEN_HEIGHT;
 
 HandCursor* curs[BIRDCOUNT + 1];
 HandCursor* player = NULL;
@@ -68,10 +71,13 @@ Path2D barrierPaths[NPATHS];
 Object2D* traces[NTRACES];
 Image* text = NULL;
 Image* trialnum = NULL;
+Image* textscr2 = NULL;
+Image* textsubwin = NULL;
 Sound* startbeep = NULL;
 Sound* scorebeep = NULL;
 Sound* errorbeep = NULL;
 SDL_Color textColor = {0, 0, 0, 1};
+SDL_Color whitetextColor = {1, 1, 1, 1};
 DataWriter* writer = NULL;
 GameState state;
 Timer* trialTimer;
@@ -132,6 +138,8 @@ int NTRIALS = 0;
 int CurTrial = 0;
 
 #define curtr trtbl[CurTrial]
+
+
 
 //target structure; keep track of the target and other parameters, for writing out to data stream
 TargetFrame Target;
@@ -343,11 +351,70 @@ bool init()
 	else
 		std::cerr << "SDL initialized." << std::endl;
 
+	//initialize all the screens
+	nWindows = SDL_GetNumVideoDisplays();
+	std::cerr << "Number of displays: " << nWindows << std::endl;
 
+	for( a = 0; a < (nWindows <= 2 ? nWindows : 2); a++ )
+    {
+        //window_data& screen = screens[a];
+        SDL_GetDisplayBounds( a, &screens[a].bounds );
+
+		//define some constants based on the dimensions of the primary window
+		if (a == 0)
+		{
+			SCREEN_WIDTH = screens[a].bounds.w;
+			SCREEN_HEIGHT = screens[a].bounds.h;
+		}
+
+		std::cerr << "   Display" << a << ": (" << screens[a].bounds.x << ',' << screens[a].bounds.y << "), " << screens[a].bounds.w << "x" << screens[a].bounds.h << std::endl;
+        screens[a].window = SDL_CreateWindow
+            ( 
+            "Display", 
+            screens[a].bounds.x, 0, 
+            screens[a].bounds.w, screens[a].bounds.h, 
+            SDL_WINDOW_OPENGL | (WINDOWED ? 0 : SDL_WINDOW_BORDERLESS) //SDL_WINDOW_FULLSCREEN 
+            );
+        //SDL_ShowWindow( screen.window );
+		if (screens[a].window == NULL)
+		{
+			std::cerr << "Screen " << a << " failed to build." << std::endl;
+			return false;
+		}
+		else
+		{
+			screens[a].glcontext = SDL_GL_CreateContext(screens[a].window);
+			std::cerr << "Screen  " << a << " built." << std::endl;
+		}
+
+	}
+
+	//set up the sub-window that will be a mirror of the original window; this will always be the last window and will be situated on the second window
+	SDL_GetDisplayBounds( nWindows-1, &screens[2].bounds );
+	std::cerr << "   Subwindow: (" << screens[2].bounds.x << ',' << screens[2].bounds.y << "), " << screens[2].bounds.w << "x" << screens[2].bounds.h << std::endl;
+	screens[2].window = SDL_CreateWindow
+		( 
+		"Subwindow-Mirror", 
+		screens[2].bounds.x, 0, 
+		screens[2].bounds.w*0.75, screens[2].bounds.h*0.75, 
+		SDL_WINDOW_OPENGL | (WINDOWED ? 0 : SDL_WINDOW_BORDERLESS)
+		);
+	if (screens[2].window == NULL)
+	{
+		std::cerr << "Subwindow failed to build." << std::endl;
+		return false;
+	}
+	else
+	{
+		screens[2].glcontext = SDL_GL_CreateContext(screens[2].window);
+		std::cerr << "Subwindow built." << std::endl;
+	}
+
+	/*
 	screen = SDL_CreateWindow("Code Base SDL2",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | (WINDOWED ? 0 : SDL_WINDOW_FULLSCREEN)); //SCREEN_BPP,
 	//note, this call is missing the request to set to 32 bpp. unclear if this is going to be a problem
-
-	if (screen == NULL)
+	
+	if (screens[0].window == NULL)
 	{
 		std::cerr << "Screen failed to build." << std::endl;
 		return false;
@@ -357,6 +424,7 @@ bool init()
 		glcontext = SDL_GL_CreateContext(screen);
 		std::cerr << "Screen built." << std::endl;
 	}
+	*/
 
 	SDL_GL_SetSwapInterval(0); //ask for immediate updates rather than syncing to vertical retrace
 
@@ -394,7 +462,7 @@ bool init()
 	for (a = 0; a < NTRACES; a++)
 	{
 		sprintf(tmpstr,"%s/Trace%d.png",TRACEPATH,a);
-		tgttraces[a] = Image::LoadFromFile(tmpstr);
+		tgttraces[a] = Image::LoadFromFile(tmpstr, screens,0);
 		if (tgttraces[a] == NULL)
 			std::cerr << "Image Trace" << a << " did not load." << std::endl;
 		else
@@ -558,12 +626,17 @@ bool init()
 	errorbeep = new Sound("Resources/errorbeep1.wav");
 
 	//set up placeholder text
-	text = Image::ImageText(text, " ","arial.ttf", 28, textColor);
+	text = Image::ImageText(text, " ","arial.ttf", 28, textColor, screens,0);
 	text->Off();
 
 	//set up trial number text image
-	trialnum = Image::ImageText(trialnum,"1","arial.ttf", 12,textColor);
+	trialnum = Image::ImageText(trialnum,"1","arial.ttf", 12,textColor, screens,0);
 	trialnum->On();
+
+	textscr2 = Image::ImageText(textscr2,"Disp2","arial.ttf",28,textColor, screens,1);
+
+	textsubwin = Image::ImageText(textsubwin,"SubWindow","arial.ttf",28,textColor, screens,2);
+
 
 	hoverTimer = new Timer();
 	trialTimer = new Timer();
@@ -579,24 +652,79 @@ bool init()
 
 static void setup_opengl()
 {
+	int a;
+
+	
+	//set up the primary display
+	SDL_GL_MakeCurrent(screens[0].window,screens[0].glcontext);
+
 	glClearColor(1, 1, 1, 0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
 	/* The default coordinate system has (0, 0) at the bottom left. Width and
-	 * height are in meters, defined by PHYSICAL_WIDTH and PHYSICAL_HEIGHT
-	 * (config.h). If MIRRORED (config.h) is set to true, everything is flipped
-	 * horizontally.
-	 */
+	* height are in meters, defined by PHYSICAL_WIDTH and PHYSICAL_HEIGHT
+	* (config.h). If MIRRORED (config.h) is set to true, everything is flipped
+	* horizontally.
+	*/
 	glOrtho(MIRRORED ? PHYSICAL_WIDTH : 0, MIRRORED ? 0 : PHYSICAL_WIDTH,
 		0, PHYSICAL_HEIGHT, -1.0f, 1.0f);
 
-	glEnable (GL_BLEND);
-	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glEnable(GL_LINE_SMOOTH);
 	glEnable(GL_POLYGON_SMOOTH);
+
+	
+
+	//set up the secondary display if available
+	for (a = 1; a < (nWindows <= 2 ? nWindows : 2); a++)
+	{
+		SDL_GL_MakeCurrent(screens[a].window,screens[a].glcontext);
+
+		glClearColor(0.5, 0.5, 0.5, 0);
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
+		/* Since this is a secondary display for the experimenter, it's easier to work in screen coordinates 
+		 * than physical coordinates. So we will set (0 , 0) at the bottom left, and SCREEN_WIDTH and SCREEN_HEIGHT
+		 * in pixels. We will never mirror this display. 
+		*/
+		glOrtho(0, screens[a].bounds.w, 0, screens[a].bounds.h, -1.0f, 1.0f);
+		
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		glEnable(GL_LINE_SMOOTH);
+		glEnable(GL_POLYGON_SMOOTH);
+	}
+
+
+
+	//set up subwindow
+	SDL_GL_MakeCurrent(screens[2].window,screens[2].glcontext);
+
+	glClearColor(1, 1, 1, 0);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	/* This is a mirror of the original display screen, so it will have the same physical dimensions 
+	 * defined by PHYSICAL_WIDTH and PHYSICAL_HEIGHT (config.h). This will be exactly the mirror image of what is on screen, so 
+	 * it shows what the participant sees through the mirror. If the mirrored flag is not set, it will also be reversed here.
+	*/
+	glOrtho(MIRRORED ? 0 : PHYSICAL_WIDTH, MIRRORED ? PHYSICAL_WIDTH : 0,
+		0, PHYSICAL_HEIGHT, -1.0f, 1.0f);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_POLYGON_SMOOTH);
+
 
 }
 
@@ -604,12 +732,14 @@ static void setup_opengl()
 //end the program; clean up everything neatly.
 void clean_up()
 {
+	int a;
+
 	delete startCircle;
 	delete targCircle;
 	delete scorebeep;
 	delete errorbeep;
 	
-	for (int a = 0; a < NTRACES; a++)
+	for (a = 0; a < NTRACES; a++)
 		delete traces[a];
 	
 
@@ -620,8 +750,11 @@ void clean_up()
 
 	delete writer;
 
-	SDL_GL_DeleteContext(glcontext);
-	SDL_DestroyWindow(screen);
+	for(a = 0; a < nWindows; a++ )
+    {
+		SDL_GL_DeleteContext(screens[a].glcontext);
+		SDL_DestroyWindow(screens[a].window);
+	}
 
 	Mix_CloseAudio();
 	TTF_Quit();
@@ -636,9 +769,11 @@ void clean_up()
 //control what is drawn to the screen
 static void draw_screen()
 {
+
+	SDL_GL_MakeCurrent(screens[0].window,screens[0].glcontext);
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	
 	//draw the trace specified
 	Target.trace = -1;
 	for (int a = 0; a < NTRACES; a++)
@@ -708,8 +843,37 @@ static void draw_screen()
 	//write the trial number
 	trialnum->Draw(PHYSICAL_WIDTH*23/24, PHYSICAL_HEIGHT*23/24);
 
-	SDL_GL_SwapWindow(screen);
+	SDL_GL_SwapWindow(screens[0].window);
 	glFlush();
+
+
+	//if we have a second display, draw into it
+	if (nWindows > 1)
+	{
+		//draw the secondary screen
+		SDL_GL_MakeCurrent(screens[1].window,screens[1].glcontext);
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		textscr2->Draw(200.0f,200.0f);
+
+		SDL_GL_SwapWindow(screens[1].window);
+		glFlush();
+
+		
+		//draw the mirrored subscreen
+		SDL_GL_MakeCurrent(screens[2].window,screens[2].glcontext);
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		textsubwin->Draw(PHYSICAL_WIDTH/2,PHYSICAL_HEIGHT/2);
+		
+		player->Draw();
+
+		SDL_GL_SwapWindow(screens[2].window);
+		glFlush();
+		
+	}
 
 }
 
@@ -1002,7 +1166,7 @@ void game_update()
 				CurTrial++;
 				std::stringstream texttn;
 				texttn << CurTrial+1;  //CurTrial starts from 0, so we add 1 for convention.
-				trialnum = Image::ImageText(trialnum,texttn.str().c_str(),"arial.ttf", 12,textColor);
+				trialnum = Image::ImageText(trialnum,texttn.str().c_str(),"arial.ttf", 12,textColor, screens,0);
 				std::cerr << "Trial " << CurTrial << " ended at " << SDL_GetTicks() << std::endl;
 
 				//if we have reached the end of the trial table, quit
@@ -1047,7 +1211,7 @@ void game_update()
 				scorestring << "You earned " 
 							<< score 
 							<< " points.";
-				text = Image::ImageText(text, scorestring.str().c_str(), "arial.ttf", 28, textColor);
+				text = Image::ImageText(text, scorestring.str().c_str(), "arial.ttf", 28, textColor, screens,0);
 
 				writefinalscore = true;
 			}

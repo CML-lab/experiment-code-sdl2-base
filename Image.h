@@ -19,14 +19,14 @@ private:
 public:
 	// surface must not be NULL.
 	// ratio defines the resolution of the image in meters per pixel
-	Image(SDL_Surface* surface, float ratio = PHYSICAL_RATIO);
+	Image(SDL_Surface* surface, SCREEN_struct scr[], int win = 0, float ratio = PHYSICAL_RATIO);
 	~Image() { }
 	// Creates an Image object based on the supplied file path and returns a
 	// pointer to the new Image. If the image could not be created, returns null.
 
-	static Image* ImageText(Image* txt, const char* txtstr, const std::string& fonttype, int fontsize, SDL_Color fontcolor);
+	static Image* ImageText(Image* txt, const char* txtstr, const std::string& fonttype, int fontsize, SDL_Color fontcolor, SCREEN_struct scr[], int win = 0);
 
-	static Image* LoadFromFile(char* filePath);
+	static Image* LoadFromFile(char* filePath, SCREEN_struct scr[], int win = 0);
 	// Get the OpenGL texture for this Image
 	GLuint GetTexture() const;
 	// Get the default width of this Image in meters
