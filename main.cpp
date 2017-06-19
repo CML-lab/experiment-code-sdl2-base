@@ -86,6 +86,9 @@ Timer* movTimer;
 typedef struct {
 	Image* title;
 	Image* trialnum;
+	Image* statusflagpath;
+	Image* statusflagregion;
+	Image* statusflagtgt;
 } TRIALTEXT;
 TRIALTEXT trialtext;
 
@@ -667,6 +670,9 @@ bool init()
 	std::stringstream texttn;
 	texttn << "Trial 1 of " << NTRIALS;
 	trialtext.trialnum = Image::ImageText(trialtext.trialnum,texttn.str().c_str(),"arial.ttf",15,textColor, drawstruc.drawsecondtext);
+	trialtext.statusflagpath = Image::ImageText(trialtext.statusflagpath,"Hit Path: False","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+	trialtext.statusflagregion = Image::ImageText(trialtext.statusflagregion,"Hit Region: False","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+	trialtext.statusflagtgt = Image::ImageText(trialtext.statusflagtgt,"Hit Target: False","arial.ttf",15,textColor, drawstruc.drawsecondtext);
 
 	textsubwin = Image::ImageText(textsubwin,"SubWindow","arial.ttf",28,textColor, drawstruc.drawsubtext);
 
@@ -843,7 +849,7 @@ static void draw_all_screens()
 		draw_screen(2);
 
 		//add in new stuff on the subwindow
-		textsubwin->Draw(PHYSICAL_WIDTH/2,0.65, 2);
+		textsubwin->Draw(PHYSICAL_WIDTH/2,0.60, 2);
 
 		SDL_GL_SwapWindow(screens[2].window);
 		glFlush();
@@ -865,7 +871,9 @@ static void draw_experimenter_text()
 
 	trialtext.title->DrawAlign(.05f,.15f,trialtext.title->GetWidth(),trialtext.title->GetHeight(), 3, 1);
 	trialtext.trialnum->DrawAlign(.06f,.13f,trialtext.trialnum->GetWidth(),trialtext.trialnum->GetHeight(), 3, 1);
-		
+	trialtext.statusflagtgt->DrawAlign(.06f,.11f,trialtext.statusflagtgt->GetWidth(),trialtext.statusflagtgt->GetHeight(), 3, 1);
+	trialtext.statusflagpath->DrawAlign(.06f,.10f,trialtext.statusflagpath->GetWidth(),trialtext.statusflagpath->GetHeight(), 3, 1);
+	trialtext.statusflagregion->DrawAlign(.06f,.09f,trialtext.statusflagregion->GetWidth(),trialtext.statusflagregion->GetHeight(), 3, 1);
 
 }
 
@@ -1027,6 +1035,11 @@ void game_update()
 					traces[curtr.trace]->On();
 				}
 
+				trialtext.statusflagpath = Image::ImageText(trialtext.statusflagpath,"Hit Path: False","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+				trialtext.statusflagregion = Image::ImageText(trialtext.statusflagregion,"Hit Region: False","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+				trialtext.statusflagtgt = Image::ImageText(trialtext.statusflagtgt,"Hit Target: False","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+
+
 				std::cerr << "Leaving IDLE state." << std::endl;
 				
 				LastPeakVel = PeakVel;
@@ -1141,6 +1154,10 @@ void game_update()
 			if (curtr.path >= 0 && barrierPaths[curtr.path].PathCollision(player))
 			{
 				barrierPaths[curtr.path].SetPathColor(orangeColor);
+				
+				if (!hitPath)
+					trialtext.statusflagpath = Image::ImageText(trialtext.statusflagpath,"Hit Path: True","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+				
 				hitPath = true;
 			}
 
@@ -1148,6 +1165,10 @@ void game_update()
 			if (curtr.region >= 0 && barrierRegions[curtr.region].InRegion(player))
 			{
 				barrierRegions[curtr.region].SetRegionColor(orangeColor);
+				
+				if (!hitRegion)
+					trialtext.statusflagregion = Image::ImageText(trialtext.statusflagregion,"Hit Region: True","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+				
 				hitRegion = true;
 			}
 
@@ -1155,8 +1176,14 @@ void game_update()
 			//check if the player hit the target
 			if (player->HitTarget(targCircle))
 			{
-				hitTarget = true;
 				targCircle->SetColor(targHitColor);
+
+				if (!hitTarget)
+					trialtext.statusflagtgt = Image::ImageText(trialtext.statusflagtgt,"Hit Target: True","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+
+				hitTarget = true;
+				
+				
 			}
 
 
