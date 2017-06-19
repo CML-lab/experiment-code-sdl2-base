@@ -58,6 +58,7 @@ extern int SCREEN_HEIGHT;
 #define NSCREEN 3
 typedef struct window_data
 {
+	int displayIndex;
     SDL_Rect bounds;
     SDL_Window *window;
 	SDL_GLContext glcontext;

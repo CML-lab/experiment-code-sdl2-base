@@ -390,50 +390,90 @@ bool init()
 	nWindows = SDL_GetNumVideoDisplays();
 	std::cerr << "Number of displays: " << nWindows << std::endl;
 
-	for( a = 0; a < (nWindows <= 2 ? nWindows : 2); a++ )
-    {
-        //window_data& screen = screens[a];
-        SDL_GetDisplayBounds( a, &screens[a].bounds );
+	/*We always want the experiment screen to be in position 0 in the matrix, but it will refer to
+	 * either the primary screen (one screen) or secondary screen (dual-screen) depending on the setup.
+	*/
+	if (nWindows == 1)
+	{
+		screens[0].displayIndex = 0;
+
+		//primary screen
+        SDL_GetDisplayBounds(0 , &screens[0].bounds );
 
 		//define some constants based on the dimensions of the primary window
-		if (a == 0)
-		{
-			SCREEN_WIDTH = screens[a].bounds.w;
-			SCREEN_HEIGHT = screens[a].bounds.h;
-		}
+		SCREEN_WIDTH = screens[0].bounds.w;
+		SCREEN_HEIGHT = screens[0].bounds.h;
 
-		std::cerr << "   Display" << a << ": (" << screens[a].bounds.x << ',' << screens[a].bounds.y << "), " << screens[a].bounds.w << "x" << screens[a].bounds.h << std::endl;
-        screens[a].window = SDL_CreateWindow
+		std::cerr << "   Display" << 0 << ": (" << screens[0].bounds.x << ',' << screens[0].bounds.y << "), " << screens[0].bounds.w << "x" << screens[0].bounds.h << std::endl;
+        screens[0].window = SDL_CreateWindow
             ( 
             "Display", 
-            screens[a].bounds.x, 0, 
-            screens[a].bounds.w, screens[a].bounds.h, 
+            screens[0].bounds.x, 0, 
+            screens[0].bounds.w, screens[0].bounds.h, 
             SDL_WINDOW_OPENGL | (WINDOWED ? 0 : SDL_WINDOW_BORDERLESS) //SDL_WINDOW_FULLSCREEN 
             );
         //SDL_ShowWindow( screen.window );
-		if (screens[a].window == NULL)
+		if (screens[0].window == NULL)
 		{
-			std::cerr << "Screen " << a << " failed to build." << std::endl;
+			std::cerr << "Screen " << 0 << " failed to build." << std::endl;
 			return false;
 		}
 		else
 		{
-			screens[a].glcontext = SDL_GL_CreateContext(screens[a].window);
-			std::cerr << "Screen  " << a << " built." << std::endl;
+			screens[0].glcontext = SDL_GL_CreateContext(screens[0].window);
+			std::cerr << "Screen  " << 0 << " built." << std::endl;
 		}
 
 	}
-
-	if (nWindows > 1)
+	else
 	{
+		screens[0].displayIndex = 1;
+		screens[1].displayIndex = 0;
+
+		//save bounds from secondary monitor to primary display
+		SDL_GetDisplayBounds( screens[1].displayIndex, &screens[1].bounds );
+
+		//save bounds from primary monitor to secondary display
+		SDL_GetDisplayBounds( screens[0].displayIndex, &screens[0].bounds );
+
+		//define some constants based on the dimensions of the primary window
+		SCREEN_WIDTH = screens[0].bounds.w;
+		SCREEN_HEIGHT = screens[0].bounds.h;
+
+		for (a = 0; a < 2; a++)
+		{
+
+			std::cerr << "   Display" << a << ": (" << screens[a].bounds.x << ',' << screens[a].bounds.y << "), " << screens[a].bounds.w << "x" << screens[a].bounds.h << std::endl;
+			screens[a].window = SDL_CreateWindow
+				( 
+				"Display", 
+				screens[a].bounds.x, 0, 
+				screens[a].bounds.w, screens[a].bounds.h, 
+				SDL_WINDOW_OPENGL | (WINDOWED ? 0 : SDL_WINDOW_BORDERLESS) //SDL_WINDOW_FULLSCREEN 
+				);
+			//SDL_ShowWindow( screen.window );
+			if (screens[a].window == NULL)
+			{
+				std::cerr << "Screen " << a << " failed to build." << std::endl;
+				return false;
+			}
+			else
+			{
+				screens[a].glcontext = SDL_GL_CreateContext(screens[a].window);
+				std::cerr << "Screen  " << a << " built." << std::endl;
+			}
+		}
+
 		//set the appropriate texture draw flags for a secondary display
 		drawstruc.drawtraces[2] = 1;  //also draw onto the subwindow
 		drawstruc.drawmaintext[2] = 1; //also draw onto the subwindow
 		drawstruc.drawsecondtext[1] = 1; //draw secondary text to the experimenter window
 
-
 		//set up the sub-window that will be a mirror of the original window; this will always be the last window and will be situated on the second window
-		SDL_GetDisplayBounds( nWindows-1, &screens[2].bounds );
+		screens[2].bounds.x = screens[1].bounds.x;
+		screens[2].bounds.y = screens[1].bounds.y;
+		screens[2].bounds.w = screens[0].bounds.w;
+		screens[2].bounds.h = screens[0].bounds.h;
 		std::cerr << "   Subwindow: (" << screens[2].bounds.x << ',' << screens[2].bounds.y << "), " << screens[2].bounds.w << "x" << screens[2].bounds.h << std::endl;
 		screens[2].window = SDL_CreateWindow
 			( 
@@ -453,7 +493,6 @@ bool init()
 			std::cerr << "Subwindow built." << std::endl;
 		}
 	}
-
 
 	SDL_GL_SetSwapInterval(0); //ask for immediate updates rather than syncing to vertical retrace
 
