@@ -12,23 +12,25 @@
 class Image
 {
 private:
-	GLuint texture;
+	GLuint texture[3];
 	GLfloat width;
 	GLfloat height;
 	GLint drawOn;
+	bool text;
 public:
 	// surface must not be NULL.
 	// ratio defines the resolution of the image in meters per pixel
-	Image(SDL_Surface* surface, SCREEN_struct scr[], int win = 0, float ratio = PHYSICAL_RATIO);
+	Image(SDL_Surface* surface, int wins[], float ratio = PHYSICAL_RATIO);
 	~Image() { }
 	// Creates an Image object based on the supplied file path and returns a
 	// pointer to the new Image. If the image could not be created, returns null.
 
-	static Image* ImageText(Image* txt, const char* txtstr, const std::string& fonttype, int fontsize, SDL_Color fontcolor, SCREEN_struct scr[], int win = 0);
+	//compact call to create a text image
+	static Image* ImageText(Image* txt, const char* txtstr, const std::string& fonttype, int fontsize, SDL_Color fontcolor, int wins[]);
 
-	static Image* LoadFromFile(char* filePath, SCREEN_struct scr[], int win = 0);
+	static Image* LoadFromFile(char* filePath, int wins[]);
 	// Get the OpenGL texture for this Image
-	GLuint GetTexture() const;
+	GLuint GetTexture(int win = 0) const;
 	// Get the default width of this Image in meters
 	GLfloat GetWidth() const;
 	// Get the default height of this Image in meters
@@ -41,14 +43,14 @@ public:
 	void Off();		//set the draw flag off
 	int DrawState();	//return the draw flag
 
-	void Draw(GLfloat xPos, GLfloat yPos, GLfloat theta = 0.0f);
+	void Draw(GLfloat xPos, GLfloat yPos, int win = 0, GLfloat theta = 0.0f);
 	// Draw the image
 	// w and h define the dimensions to draw the image
-	void Draw(GLfloat xPos, GLfloat yPos, GLfloat w, GLfloat h, GLfloat theta = 0.0f);
+	void Draw(GLfloat xPos, GLfloat yPos, GLfloat w, GLfloat h, int win = 0, GLfloat theta = 0.0f);
 	// Draw the image
 	// w and h define the dimensions to draw the image
 	// alighflag says how to draw the image: 0 = centered, 1 = right, 2 = up, 3 = left, 4 = down.
-	void DrawAlign(GLfloat xPos, GLfloat yPos, GLfloat w, GLfloat h, GLint cflag = 0);
+	void DrawAlign(GLfloat xPos, GLfloat yPos, GLfloat w, GLfloat h, GLint cflag = 0, int win = 0);
 };
 
 #endif

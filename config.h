@@ -55,12 +55,14 @@
 //#define SCREEN_HEIGHT  1080
 extern int SCREEN_WIDTH;
 extern int SCREEN_HEIGHT;
+#define NSCREEN 3
 typedef struct window_data
 {
     SDL_Rect bounds;
     SDL_Window *window;
 	SDL_GLContext glcontext;
 } SCREEN_struct;
+extern SCREEN_struct screens[NSCREEN];
 
 #if TRACKTYPE == 0
 

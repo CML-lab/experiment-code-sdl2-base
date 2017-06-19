@@ -89,14 +89,14 @@ void Object2D::SetAngle(GLfloat theta)
 	angle = theta;
 }
 
-void Object2D::Draw()
+void Object2D::Draw(int win)
 {
-	image->Draw(xpos, ypos, angle);  //draw is subject to the image draw flag
+	image->Draw(xpos, ypos, win, angle);  //draw is subject to the image draw flag
 }
 
-void Object2D::Draw(GLfloat width, GLfloat height)
+void Object2D::Draw(GLfloat width, GLfloat height, int win)
 {
-	image->Draw(xpos, ypos, width, height, angle);  //draw is subject to the image draw flag
+	image->Draw(xpos, ypos, width, height, win, angle);  //draw is subject to the image draw flag
 }
 
 float Object2D::Distance(Object2D* ob1, Object2D* ob2)

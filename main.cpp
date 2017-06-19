@@ -57,7 +57,7 @@ enum GameState
 
 SDL_Event event;
 int nWindows;
-SCREEN_struct screens[3];
+SCREEN_struct screens[NSCREEN];
 int SCREEN_WIDTH;
 int SCREEN_HEIGHT;
 
@@ -70,8 +70,7 @@ Region2D barrierRegions[NREGIONS];
 Path2D barrierPaths[NPATHS];
 Object2D* traces[NTRACES];
 Image* text = NULL;
-Image* trialnum = NULL;
-Image* textscr2 = NULL;
+//Image* trialnum = NULL;
 Image* textsubwin = NULL;
 Sound* startbeep = NULL;
 Sound* scorebeep = NULL;
@@ -83,6 +82,14 @@ GameState state;
 Timer* trialTimer;
 Timer* hoverTimer;
 Timer* movTimer;
+
+typedef struct {
+	Image* title;
+	Image* trialnum;
+} TRIALTEXT;
+TRIALTEXT trialtext;
+
+
 
 //Uint32 gameTimer;
 //Uint32 hoverTimer;
@@ -140,6 +147,14 @@ int CurTrial = 0;
 #define curtr trtbl[CurTrial]
 
 
+typedef struct {
+	int drawtraces[NSCREEN];
+	int drawmaintext[NSCREEN];
+	int drawsecondtext[NSCREEN];
+	int drawsubtext[NSCREEN];
+} DRAWSTRUC;
+
+DRAWSTRUC drawstruc;
 
 //target structure; keep track of the target and other parameters, for writing out to data stream
 TargetFrame Target;
@@ -150,8 +165,12 @@ bool init();
 void setup_opengl();
 // Performs closing operations
 void clean_up();
-// Draws objects on the screen
-void draw_screen();
+// Specifies the objects that are to be drawn to the primary screen
+void draw_screen(int win);
+//Specifies what text objects are to be drawn to the experimenter screen
+void draw_experimenter_text();
+//wrapper around draw_screen() to handle secondary displays
+void draw_all_screens();
 //file to load in trial table
 int LoadTrFile(char *filename);
 // Update loop (state machine)
@@ -261,7 +280,7 @@ int main(int argc, char* args[])
 		game_update(); // Run the game loop (state machine update)
 
 		//if (updatedisplay)  //reduce number of calls to draw_screen -- does this speed up display/update?
-		draw_screen();
+		draw_all_screens();
 
 	}
 
@@ -332,6 +351,19 @@ bool init()
 	char fname[50] = TRIALFILE;
 	//char dataPath[50] = DATA_OUTPUT_PATH;
 
+	//initialize draw structure parameters
+	for (a = 0; a < 3; a++)
+	{
+		drawstruc.drawtraces[a] = 1;
+		drawstruc.drawmaintext[a] = 0;
+		drawstruc.drawsecondtext[a] = 0;
+		drawstruc.drawsubtext[a] = 0;
+	}
+	drawstruc.drawtraces[0] = 1;
+	drawstruc.drawmaintext[0] = 1;
+	drawstruc.drawsecondtext[1] = 1;
+	drawstruc.drawsubtext[2] = 1;
+
 	//std::cerr << "Start init." << std::endl;
 
 	std::cerr << std::endl;
@@ -389,42 +421,36 @@ bool init()
 
 	}
 
-	//set up the sub-window that will be a mirror of the original window; this will always be the last window and will be situated on the second window
-	SDL_GetDisplayBounds( nWindows-1, &screens[2].bounds );
-	std::cerr << "   Subwindow: (" << screens[2].bounds.x << ',' << screens[2].bounds.y << "), " << screens[2].bounds.w << "x" << screens[2].bounds.h << std::endl;
-	screens[2].window = SDL_CreateWindow
-		( 
-		"Subwindow-Mirror", 
-		screens[2].bounds.x, 0, 
-		screens[2].bounds.w*0.75, screens[2].bounds.h*0.75, 
-		SDL_WINDOW_OPENGL | (WINDOWED ? 0 : SDL_WINDOW_BORDERLESS)
-		);
-	if (screens[2].window == NULL)
+	if (nWindows > 1)
 	{
-		std::cerr << "Subwindow failed to build." << std::endl;
-		return false;
-	}
-	else
-	{
-		screens[2].glcontext = SDL_GL_CreateContext(screens[2].window);
-		std::cerr << "Subwindow built." << std::endl;
+		//set the appropriate texture draw flags for a secondary display
+		drawstruc.drawtraces[2] = 1;  //also draw onto the subwindow
+		drawstruc.drawmaintext[2] = 1; //also draw onto the subwindow
+		drawstruc.drawsecondtext[1] = 1; //draw secondary text to the experimenter window
+
+
+		//set up the sub-window that will be a mirror of the original window; this will always be the last window and will be situated on the second window
+		SDL_GetDisplayBounds( nWindows-1, &screens[2].bounds );
+		std::cerr << "   Subwindow: (" << screens[2].bounds.x << ',' << screens[2].bounds.y << "), " << screens[2].bounds.w << "x" << screens[2].bounds.h << std::endl;
+		screens[2].window = SDL_CreateWindow
+			( 
+			"Subwindow-Mirror", 
+			screens[2].bounds.x, 0, 
+			screens[2].bounds.w*0.75, screens[2].bounds.h*0.75, 
+			SDL_WINDOW_OPENGL | (WINDOWED ? 0 : SDL_WINDOW_BORDERLESS)
+			);
+		if (screens[2].window == NULL)
+		{
+			std::cerr << "Subwindow failed to build." << std::endl;
+			return false;
+		}
+		else
+		{
+			screens[2].glcontext = SDL_GL_CreateContext(screens[2].window);
+			std::cerr << "Subwindow built." << std::endl;
+		}
 	}
 
-	/*
-	screen = SDL_CreateWindow("Code Base SDL2",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | (WINDOWED ? 0 : SDL_WINDOW_FULLSCREEN)); //SCREEN_BPP,
-	//note, this call is missing the request to set to 32 bpp. unclear if this is going to be a problem
-	
-	if (screens[0].window == NULL)
-	{
-		std::cerr << "Screen failed to build." << std::endl;
-		return false;
-	}
-	else
-	{
-		glcontext = SDL_GL_CreateContext(screen);
-		std::cerr << "Screen built." << std::endl;
-	}
-	*/
 
 	SDL_GL_SetSwapInterval(0); //ask for immediate updates rather than syncing to vertical retrace
 
@@ -456,13 +482,17 @@ bool init()
 
 	// Load files and initialize pointers
 	
+	//load all the trace files
+	/* Note, for textures the draw specification is annoying: you have to draw a texture into each window/context that you want.
+	 * To that end, it is necessary to specify an array indictating that images should be drawn both to the main window and, if
+	 * available, the mirrored subwindow for the experimenter
+	*/
 	Image* tgttraces[NTRACES];
 
-	//load all the trace files
 	for (a = 0; a < NTRACES; a++)
 	{
 		sprintf(tmpstr,"%s/Trace%d.png",TRACEPATH,a);
-		tgttraces[a] = Image::LoadFromFile(tmpstr, screens,0);
+		tgttraces[a] = Image::LoadFromFile(tmpstr, drawstruc.drawtraces);
 		if (tgttraces[a] == NULL)
 			std::cerr << "Image Trace" << a << " did not load." << std::endl;
 		else
@@ -521,7 +551,6 @@ bool init()
 	photosensorCircle->BorderOff();
 	photosensorCircle->On();
 	
-
 	//initialize the photosensor
 	int status = -5;
 	int devNum = 0;
@@ -626,16 +655,20 @@ bool init()
 	errorbeep = new Sound("Resources/errorbeep1.wav");
 
 	//set up placeholder text
-	text = Image::ImageText(text, " ","arial.ttf", 28, textColor, screens,0);
+	text = Image::ImageText(text, " ","arial.ttf", 28, textColor, drawstruc.drawmaintext);
 	text->Off();
 
 	//set up trial number text image
-	trialnum = Image::ImageText(trialnum,"1","arial.ttf", 12,textColor, screens,0);
-	trialnum->On();
+	//trialnum = Image::ImageText(trialnum,"1","arial.ttf", 12,textColor, drawstruc.drawmaintext);
+	//trialnum->On();
 
-	textscr2 = Image::ImageText(textscr2,"Disp2","arial.ttf",28,textColor, screens,1);
+	//setup experimenter display text
+	trialtext.title = Image::ImageText(trialtext.title,"Trial Information","arial.ttf",20,textColor, drawstruc.drawsecondtext);
+	std::stringstream texttn;
+	texttn << "Trial 1 of " << NTRIALS;
+	trialtext.trialnum = Image::ImageText(trialtext.trialnum,texttn.str().c_str(),"arial.ttf",15,textColor, drawstruc.drawsecondtext);
 
-	textsubwin = Image::ImageText(textsubwin,"SubWindow","arial.ttf",28,textColor, screens,2);
+	textsubwin = Image::ImageText(textsubwin,"SubWindow","arial.ttf",28,textColor, drawstruc.drawsubtext);
 
 
 	hoverTimer = new Timer();
@@ -680,50 +713,52 @@ static void setup_opengl()
 	
 
 	//set up the secondary display if available
-	for (a = 1; a < (nWindows <= 2 ? nWindows : 2); a++)
+	if (nWindows > 1)
 	{
-		SDL_GL_MakeCurrent(screens[a].window,screens[a].glcontext);
+		//set up the full window display
+		SDL_GL_MakeCurrent(screens[1].window,screens[1].glcontext);
 
 		glClearColor(0.5, 0.5, 0.5, 0);
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 
-		/* Since this is a secondary display for the experimenter, it's easier to work in screen coordinates 
-		 * than physical coordinates. So we will set (0 , 0) at the bottom left, and SCREEN_WIDTH and SCREEN_HEIGHT
-		 * in pixels. We will never mirror this display. 
+		/* This is a secondary display for the experimenter, but can't get screen coordinates to work for some reason so we will stay in physical coordinates.
+		* So we will have (0 , 0) at the bottom left, and PHYSICAL_WIDTH and PHYSICAL_HEIGHT
+		* in pixels. We will never mirror this display. 
 		*/
-		glOrtho(0, screens[a].bounds.w, 0, screens[a].bounds.h, -1.0f, 1.0f);
+		//glOrtho(0, screens[1].bounds.w, 0, screens[1].bounds.h, -1.0f, 1.0f);
+		glOrtho(0, PHYSICAL_WIDTH, 0, PHYSICAL_HEIGHT, -1.0f, 1.0f);
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		glEnable(GL_LINE_SMOOTH);
+		glEnable(GL_POLYGON_SMOOTH);
+
+
 		
+		//set up the subwindow mirror
+		SDL_GL_MakeCurrent(screens[2].window,screens[2].glcontext);
+
+		glClearColor(1, 1, 1, 0);
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
+		/* This is a mirror of the original display screen, so it will have the same physical dimensions 
+		* defined by PHYSICAL_WIDTH and PHYSICAL_HEIGHT (config.h). This will be exactly the mirror image of what is on screen, so 
+		* it shows what the participant sees through the mirror. If the mirrored flag is not set, this screen will appear backwards.
+		*/
+		glOrtho(MIRRORED ? 0 : PHYSICAL_WIDTH, MIRRORED ? PHYSICAL_WIDTH : 0,
+			0, PHYSICAL_HEIGHT, -1.0f, 1.0f);
+
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		glEnable(GL_LINE_SMOOTH);
 		glEnable(GL_POLYGON_SMOOTH);
 	}
-
-
-
-	//set up subwindow
-	SDL_GL_MakeCurrent(screens[2].window,screens[2].glcontext);
-
-	glClearColor(1, 1, 1, 0);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-
-	/* This is a mirror of the original display screen, so it will have the same physical dimensions 
-	 * defined by PHYSICAL_WIDTH and PHYSICAL_HEIGHT (config.h). This will be exactly the mirror image of what is on screen, so 
-	 * it shows what the participant sees through the mirror. If the mirrored flag is not set, it will also be reversed here.
-	*/
-	glOrtho(MIRRORED ? 0 : PHYSICAL_WIDTH, MIRRORED ? PHYSICAL_WIDTH : 0,
-		0, PHYSICAL_HEIGHT, -1.0f, 1.0f);
-
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	glEnable(GL_LINE_SMOOTH);
-	glEnable(GL_POLYGON_SMOOTH);
 
 
 }
@@ -746,7 +781,9 @@ void clean_up()
 	int status = Ftdi::CloseFtdi(ftHandle,1);
 
 	delete text;
-	delete trialnum;
+	//delete trialnum;
+	delete trialtext.title;
+	delete trialtext.trialnum;
 
 	delete writer;
 
@@ -766,19 +803,82 @@ void clean_up()
 
 }
 
-//control what is drawn to the screen
-static void draw_screen()
+
+//wrapper to handle dual-display draws by calling draw_screen()
+static void draw_all_screens()
 {
 
-	SDL_GL_MakeCurrent(screens[0].window,screens[0].glcontext);
+	int a;
 
+
+	SDL_GL_MakeCurrent(screens[0].window,screens[0].glcontext);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	//call the main screen draw function
+	draw_screen(0);
+
+	SDL_GL_SwapWindow(screens[0].window);
+	glFlush();
+
+
+	if (nWindows > 1)
+	{
+
+		//draw experimenter information to the secondary display
+		SDL_GL_MakeCurrent(screens[1].window,screens[1].glcontext);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		//call the secondary screen draw function
+		draw_experimenter_text();
+		
+		SDL_GL_SwapWindow(screens[1].window);
+		glFlush();
+
+		
+		//draw a copy of the primary scren to the subwindow
+		SDL_GL_MakeCurrent(screens[2].window,screens[2].glcontext);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		//call the main screen draw function again to make a second copy of the screen to the subwindow
+		draw_screen(2);
+
+		//add in new stuff on the subwindow
+		textsubwin->Draw(PHYSICAL_WIDTH/2,0.65, 2);
+
+		SDL_GL_SwapWindow(screens[2].window);
+		glFlush();
+		
+
+	}
+
+
+
+
+
+
+
+}
+
+
+static void draw_experimenter_text()
+{
+
+	trialtext.title->DrawAlign(.05f,.15f,trialtext.title->GetWidth(),trialtext.title->GetHeight(), 3, 1);
+	trialtext.trialnum->DrawAlign(.06f,.13f,trialtext.trialnum->GetWidth(),trialtext.trialnum->GetHeight(), 3, 1);
+		
+
+}
+
+
+//control what is drawn to the screen
+static void draw_screen(int win)
+{
 
 	//draw the trace specified
 	Target.trace = -1;
 	for (int a = 0; a < NTRACES; a++)
 	{
-		traces[a]->Draw();
+		traces[a]->Draw(win);
 		if (traces[a]->DrawState())
 			Target.trace = a;
 	}
@@ -838,42 +938,12 @@ static void draw_screen()
 
 
 	// Draw text - provide feedback at the end of the block
-	text->Draw(0.6f, 0.5f);
+	text->Draw(0.6f, 0.65f, win);
 
 	//write the trial number
-	trialnum->Draw(PHYSICAL_WIDTH*23/24, PHYSICAL_HEIGHT*23/24);
-
-	SDL_GL_SwapWindow(screens[0].window);
-	glFlush();
+	//trialnum->Draw(PHYSICAL_WIDTH*23/24, PHYSICAL_HEIGHT*23/24, win);
 
 
-	//if we have a second display, draw into it
-	if (nWindows > 1)
-	{
-		//draw the secondary screen
-		SDL_GL_MakeCurrent(screens[1].window,screens[1].glcontext);
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		textscr2->Draw(200.0f,200.0f);
-
-		SDL_GL_SwapWindow(screens[1].window);
-		glFlush();
-
-		
-		//draw the mirrored subscreen
-		SDL_GL_MakeCurrent(screens[2].window,screens[2].glcontext);
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		textsubwin->Draw(PHYSICAL_WIDTH/2,PHYSICAL_HEIGHT/2);
-		
-		player->Draw();
-
-		SDL_GL_SwapWindow(screens[2].window);
-		glFlush();
-		
-	}
 
 }
 
@@ -928,12 +998,7 @@ void game_update()
 			for (int a = 0; a < NTRACES; a++)
 				traces[a]->Off();
 
-			if (curtr.trace >= 0)
-			{
-				traces[curtr.trace]->SetPos(curtr.startx,curtr.starty);
-				traces[curtr.trace]->On();
-			}
-
+			
 			//reset and shut off all paths
 			for (int a = 0; a < NPATHS; a++)
 			{
@@ -956,6 +1021,12 @@ void game_update()
 				hoverTimer->Reset();
 				trialTimer->Reset();
 				
+				if (curtr.trace >= 0)
+				{
+					traces[curtr.trace]->SetPos(curtr.startx,curtr.starty);
+					traces[curtr.trace]->On();
+				}
+
 				std::cerr << "Leaving IDLE state." << std::endl;
 				
 				LastPeakVel = PeakVel;
@@ -976,6 +1047,7 @@ void game_update()
 
 			velBar.UpdateSpeed(PeakVel);
 			velBar.On();
+
 
 			if (player->Distance(startCircle) > START_RADIUS)
 			{
@@ -1165,9 +1237,15 @@ void game_update()
 
 				CurTrial++;
 				std::stringstream texttn;
-				texttn << CurTrial+1;  //CurTrial starts from 0, so we add 1 for convention.
-				trialnum = Image::ImageText(trialnum,texttn.str().c_str(),"arial.ttf", 12,textColor, screens,0);
+				//texttn << CurTrial+1;  //CurTrial starts from 0, so we add 1 for convention.
+				//trialnum = Image::ImageText(trialnum,texttn.str().c_str(),"arial.ttf", 12,textColor, drawstruc.drawmaintext);
+
+				texttn.str("");
+				texttn << "Trial: " << CurTrial+1 << " of " << NTRIALS;
+				trialtext.trialnum = Image::ImageText(trialtext.trialnum,texttn.str().c_str(),"arial.ttf",15,textColor, drawstruc.drawsecondtext);
+
 				std::cerr << "Trial " << CurTrial << " ended at " << SDL_GetTicks() << std::endl;
+
 
 				//if we have reached the end of the trial table, quit
 				if (CurTrial >= NTRIALS)
@@ -1211,7 +1289,7 @@ void game_update()
 				scorestring << "You earned " 
 							<< score 
 							<< " points.";
-				text = Image::ImageText(text, scorestring.str().c_str(), "arial.ttf", 28, textColor, screens,0);
+				text = Image::ImageText(text, scorestring.str().c_str(), "arial.ttf", 28, textColor, drawstruc.drawmaintext);
 
 				writefinalscore = true;
 			}

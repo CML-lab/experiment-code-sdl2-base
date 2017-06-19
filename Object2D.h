@@ -39,8 +39,8 @@ public:
 
 	void SetPos(GLfloat x, GLfloat y);	// Sets the position (meters) of the object
 	void SetAngle(GLfloat theta);		// Sets the counterclockwise rotation (radians) of the object
-	void Draw();						// Draw the object
-	void Draw(GLfloat width, GLfloat height);	// Draw the object
+	void Draw(int win = 0);						// Draw the object
+	void Draw(GLfloat width, GLfloat height, int win = 0);	// Draw the object
 	float Distance(Object2D* ob1, Object2D* ob2);	// Gets the distance between two objects (meters)
 	float Distance(Object2D* ob1, GLfloat x, GLfloat y);	// Gets the distance between an object and a position (meters)
 

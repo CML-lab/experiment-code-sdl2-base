@@ -4,7 +4,7 @@
 #include <iostream>
 
 
-Image::Image(SDL_Surface* surface, SCREEN_struct scr[], int win, float ratio)
+Image::Image(SDL_Surface* surface, int wins[], float ratio)
 {
 
 	/*This function converts an SDL surface directly to an openGL texture, rather than using the SDL_Renderer.
@@ -15,8 +15,7 @@ Image::Image(SDL_Surface* surface, SCREEN_struct scr[], int win, float ratio)
 	 * 
 	 */
 
-	SDL_GL_MakeCurrent(scr[win].window, scr[win].glcontext);
-
+	//set up some preliminary texture information
 	GLenum texture_format;
 	GLint channels;
 
@@ -44,20 +43,32 @@ Image::Image(SDL_Surface* surface, SCREEN_struct scr[], int win, float ratio)
 		}
 	}
 
-	// generate the OpenGL texture and store the width and height
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glTexImage2D(GL_TEXTURE_2D, 0, channels, surface->w, surface->h, 0, texture_format, GL_UNSIGNED_BYTE, surface->pixels);//
-	width = (GLfloat)surface->w * ratio;
-	height = (GLfloat)surface->h * ratio;
 
-	drawOn = 1;
+	//create a texture for each specified window/context
+	for (int a = 0; a < NSCREEN; a++)
+	{
+		if(wins[a] == 0)
+			continue;
+
+		SDL_GL_MakeCurrent(screens[a].window, screens[a].glcontext);
+
+		// generate the OpenGL texture and store the width and height
+		glGenTextures(1, &texture[a]);
+		glBindTexture(GL_TEXTURE_2D, texture[a]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		glTexImage2D(GL_TEXTURE_2D, 0, channels, surface->w, surface->h, 0, texture_format, GL_UNSIGNED_BYTE, surface->pixels);//
+		width = (GLfloat)surface->w * ratio;  //this won't change since it is always the same texture
+		height = (GLfloat)surface->h * ratio;  //this won't change since it is always the same texture
+
+		drawOn = 1;
+
+	}
+
 }
 
-Image* Image::LoadFromFile(char* filePath, SCREEN_struct scr[], int win)
+Image* Image::LoadFromFile(char* filePath, int wins[])
 {
 	SDL_Surface* surface = IMG_Load(filePath);
 	if (surface == NULL) // failed to load file
@@ -66,15 +77,52 @@ Image* Image::LoadFromFile(char* filePath, SCREEN_struct scr[], int win)
 	}
 	else
 	{
-		Image* image = new Image(surface, scr, win);
+		Image* image = new Image(surface, wins);
 		SDL_FreeSurface(surface);
 		return image;
 	}
+
+	//text = false;
 }
 
-GLuint Image::GetTexture() const
+
+Image* Image::ImageText(Image* txt, const char* txtstr, const std::string& fonttype, int fontsize, SDL_Color fontcolor, int wins[])
 {
-	return texture;
+	/* To create text, call a render function from SDL_ttf and use it to create
+	 * an Image object. See http://www.libsdl.org/projects/SDL_ttf/docs/SDL_ttf.html#SEC42
+	 * for a list of render functions.
+	 *
+	 * Note, this method has not been updated for new SDL2 functionality, but it still works.
+	 */
+
+
+	delete txt;
+
+	TTF_Font *font;
+
+	const std::string strdir = "Resources/";
+	const std::string fontstr = strdir + fonttype;
+	//std::cerr << fontstr << std::endl;
+
+	font = TTF_OpenFont(fontstr.c_str(), fontsize);
+	//std::cerr << font << std::endl;
+
+	txt = new Image(TTF_RenderText_Blended(font, txtstr, fontcolor), wins);
+
+	//text = true;
+
+	//std::cerr << fontstr << std::endl;
+
+	TTF_CloseFont(font);
+
+	return(txt);
+
+}
+
+
+GLuint Image::GetTexture(int win) const
+{
+	return texture[win];
 }
 
 GLfloat Image::GetWidth() const
@@ -87,20 +135,27 @@ GLfloat Image::GetHeight() const
 	return height;
 }
 
-void Image::Draw(GLfloat xPos, GLfloat yPos, GLfloat theta)
+void Image::Draw(GLfloat xPos, GLfloat yPos, int win, GLfloat theta)
 {
-	Draw(xPos, yPos, width, height, theta);
+	Draw(xPos, yPos, width, height, win, theta);
 }
 
-void Image::Draw(GLfloat xPos, GLfloat yPos, GLfloat w, GLfloat h, GLfloat theta)
+void Image::Draw(GLfloat xPos, GLfloat yPos, GLfloat w, GLfloat h, int win, GLfloat theta)
 {	
 
 	if (drawOn)
 	{
 
+		//get the current active window and context, so we can restore it after the draw
+		SDL_Window* curwin = SDL_GL_GetCurrentWindow();
+		SDL_GLContext curcntxt = SDL_GL_GetCurrentContext();
+
+		//switch to the requested window/context for the draw
+		SDL_GL_MakeCurrent(screens[win].window, screens[win].glcontext);
+
 		glColor3f(1.0f, 1.0f, 1.0f);
 
-		glBindTexture(GL_TEXTURE_2D, texture);
+		glBindTexture(GL_TEXTURE_2D, texture[win]);
 		glEnable(GL_TEXTURE_2D);
 
 		// Draw a quad with the texture on it
@@ -122,16 +177,27 @@ void Image::Draw(GLfloat xPos, GLfloat yPos, GLfloat w, GLfloat h, GLfloat theta
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glDisable(GL_TEXTURE_2D);
 
+		//switch back to the last active context/window after the draw
+		SDL_GL_MakeCurrent(curwin, curcntxt);
+
 	}
 }
 
 
-void Image::DrawAlign(GLfloat xPos, GLfloat yPos, GLfloat w, GLfloat h, GLint cflag)
+void Image::DrawAlign(GLfloat xPos, GLfloat yPos, GLfloat w, GLfloat h, GLint cflag, int win)
 {
 	if (drawOn)
 	{
 
-		glBindTexture(GL_TEXTURE_2D, texture);
+		//get the current active window and context, so we can restore it after the draw
+		SDL_Window* curwin = SDL_GL_GetCurrentWindow();
+		SDL_GLContext curcntxt = SDL_GL_GetCurrentContext();
+
+		//switch to the requested window/context for the draw
+		SDL_GL_MakeCurrent(screens[win].window, screens[win].glcontext);
+
+
+		glBindTexture(GL_TEXTURE_2D, texture[win]);
 		glEnable(GL_TEXTURE_2D);
 
 		if (cflag == 1)  //right-align
@@ -212,6 +278,9 @@ void Image::DrawAlign(GLfloat xPos, GLfloat yPos, GLfloat w, GLfloat h, GLint cf
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glDisable(GL_TEXTURE_2D);
 
+		//switch back to the last active context/window after the draw
+		SDL_GL_MakeCurrent(curwin, curcntxt);
+
 	}
 
 }
@@ -229,37 +298,4 @@ void Image::Off()
 int Image::DrawState()
 {
 	return(drawOn);
-}
-
-
-
-Image* Image::ImageText(Image* txt, const char* txtstr, const std::string& fonttype, int fontsize, SDL_Color fontcolor, SCREEN_struct scr[], int win)
-{
-	/* To create text, call a render function from SDL_ttf and use it to create
-	 * an Image object. See http://www.libsdl.org/projects/SDL_ttf/docs/SDL_ttf.html#SEC42
-	 * for a list of render functions.
-	 *
-	 * Note, this method has not been updated for new SDL2 functionality, but it still works.
-	 */
-
-
-	delete txt;
-
-	TTF_Font *font;
-
-	const std::string strdir = "Resources/";
-	const std::string fontstr = strdir + fonttype;
-	//std::cerr << fontstr << std::endl;
-
-	font = TTF_OpenFont(fontstr.c_str(), fontsize);
-	//std::cerr << font << std::endl;
-
-	txt = new Image(TTF_RenderText_Blended(font, txtstr, fontcolor), scr, win);
-
-	//std::cerr << fontstr << std::endl;
-
-	TTF_CloseFont(font);
-
-	return(txt);
-
 }
