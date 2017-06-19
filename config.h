@@ -55,7 +55,7 @@
 //#define SCREEN_HEIGHT  1080
 extern int SCREEN_WIDTH;
 extern int SCREEN_HEIGHT;
-#define NSCREEN 3
+#define NSCREEN 2
 typedef struct window_data
 {
 	int displayIndex;

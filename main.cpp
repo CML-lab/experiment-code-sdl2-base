@@ -61,6 +61,17 @@ SCREEN_struct screens[NSCREEN];
 int SCREEN_WIDTH;
 int SCREEN_HEIGHT;
 
+//structure to control which screens a given texture is drawn to (for Object2D and text objects)
+typedef struct {
+	int drawtraces[NSCREEN];
+	int drawmaintext[NSCREEN];
+	int drawsecondtext[NSCREEN];
+	int drawsubtext[NSCREEN];
+} DRAWSTRUC;
+
+DRAWSTRUC drawstruc;
+
+
 HandCursor* curs[BIRDCOUNT + 1];
 HandCursor* player = NULL;
 Circle* startCircle = NULL;
@@ -149,15 +160,6 @@ int CurTrial = 0;
 
 #define curtr trtbl[CurTrial]
 
-
-typedef struct {
-	int drawtraces[NSCREEN];
-	int drawmaintext[NSCREEN];
-	int drawsecondtext[NSCREEN];
-	int drawsubtext[NSCREEN];
-} DRAWSTRUC;
-
-DRAWSTRUC drawstruc;
 
 //target structure; keep track of the target and other parameters, for writing out to data stream
 TargetFrame Target;
@@ -357,15 +359,15 @@ bool init()
 	//initialize draw structure parameters
 	for (a = 0; a < 3; a++)
 	{
-		drawstruc.drawtraces[a] = 1;
+		drawstruc.drawtraces[a] = 0;
 		drawstruc.drawmaintext[a] = 0;
 		drawstruc.drawsecondtext[a] = 0;
-		drawstruc.drawsubtext[a] = 0;
+		//drawstruc.drawsubtext[a] = 0;
 	}
 	drawstruc.drawtraces[0] = 1;
 	drawstruc.drawmaintext[0] = 1;
 	drawstruc.drawsecondtext[1] = 1;
-	drawstruc.drawsubtext[2] = 1;
+	//drawstruc.drawsubtext[1] = 1;
 
 	//std::cerr << "Start init." << std::endl;
 
@@ -465,9 +467,18 @@ bool init()
 		}
 
 		//set the appropriate texture draw flags for a secondary display
-		drawstruc.drawtraces[2] = 1;  //also draw onto the subwindow
-		drawstruc.drawmaintext[2] = 1; //also draw onto the subwindow
+		drawstruc.drawtraces[1] = 1;  //also draw onto the subwindow
+		drawstruc.drawmaintext[1] = 1; //also draw onto the subwindow
 		drawstruc.drawsecondtext[1] = 1; //draw secondary text to the experimenter window
+
+
+		/*
+		 * The code below sets up a subwindow to mirror the display into. This solution works, but behaves oddly
+		 * on the kinereach computer and also incurs some delays, potentially because of having to do so many draws.
+		 * To address these issues, we will use a more crude method of just making the secondary display window larger 
+		 * to give us a border region for writing text
+		 * /
+
 
 		//set up the sub-window that will be a mirror of the original window; this will always be the last window and will be situated on the second window
 		screens[2].bounds.x = screens[1].bounds.x;
@@ -492,6 +503,7 @@ bool init()
 			screens[2].glcontext = SDL_GL_CreateContext(screens[2].window);
 			std::cerr << "Subwindow built." << std::endl;
 		}
+		*/
 	}
 
 	SDL_GL_SetSwapInterval(0); //ask for immediate updates rather than syncing to vertical retrace
@@ -773,7 +785,8 @@ static void setup_opengl()
 		* in pixels. We will never mirror this display. 
 		*/
 		//glOrtho(0, screens[1].bounds.w, 0, screens[1].bounds.h, -1.0f, 1.0f);
-		glOrtho(0, PHYSICAL_WIDTH, 0, PHYSICAL_HEIGHT, -1.0f, 1.0f);
+		//glOrtho(0, PHYSICAL_WIDTH, 0, PHYSICAL_HEIGHT, -1.0f, 1.0f);
+		glOrtho(0, PHYSICAL_WIDTH*1.25, 0, PHYSICAL_HEIGHT*1.25, -1.0f, 1.0f);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -782,7 +795,7 @@ static void setup_opengl()
 		glEnable(GL_POLYGON_SMOOTH);
 
 
-		
+		/*
 		//set up the subwindow mirror
 		SDL_GL_MakeCurrent(screens[2].window,screens[2].glcontext);
 
@@ -794,7 +807,7 @@ static void setup_opengl()
 		/* This is a mirror of the original display screen, so it will have the same physical dimensions 
 		* defined by PHYSICAL_WIDTH and PHYSICAL_HEIGHT (config.h). This will be exactly the mirror image of what is on screen, so 
 		* it shows what the participant sees through the mirror. If the mirrored flag is not set, this screen will appear backwards.
-		*/
+		* /
 		glOrtho(MIRRORED ? 0 : PHYSICAL_WIDTH, MIRRORED ? PHYSICAL_WIDTH : 0,
 			0, PHYSICAL_HEIGHT, -1.0f, 1.0f);
 
@@ -803,6 +816,7 @@ static void setup_opengl()
 
 		glEnable(GL_LINE_SMOOTH);
 		glEnable(GL_POLYGON_SMOOTH);
+		*/
 	}
 
 
@@ -874,6 +888,11 @@ static void draw_all_screens()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		//call the secondary screen draw function
+		
+		glColor3f(1.0f,1.0f,1.0f);
+		glRectf(0.0f,0.0f,PHYSICAL_WIDTH,PHYSICAL_HEIGHT);
+
+		draw_screen(1);
 		draw_experimenter_text();
 		
 		SDL_GL_SwapWindow(screens[1].window);
@@ -884,6 +903,7 @@ static void draw_all_screens()
 		SDL_GL_MakeCurrent(screens[2].window,screens[2].glcontext);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		/*
 		//call the main screen draw function again to make a second copy of the screen to the subwindow
 		draw_screen(2);
 
@@ -892,6 +912,7 @@ static void draw_all_screens()
 
 		SDL_GL_SwapWindow(screens[2].window);
 		glFlush();
+		*/
 		
 
 	}
@@ -908,11 +929,11 @@ static void draw_all_screens()
 static void draw_experimenter_text()
 {
 
-	trialtext.title->DrawAlign(.05f,.15f,trialtext.title->GetWidth(),trialtext.title->GetHeight(), 3, 1);
-	trialtext.trialnum->DrawAlign(.06f,.13f,trialtext.trialnum->GetWidth(),trialtext.trialnum->GetHeight(), 3, 1);
-	trialtext.statusflagtgt->DrawAlign(.06f,.11f,trialtext.statusflagtgt->GetWidth(),trialtext.statusflagtgt->GetHeight(), 3, 1);
-	trialtext.statusflagpath->DrawAlign(.06f,.10f,trialtext.statusflagpath->GetWidth(),trialtext.statusflagpath->GetHeight(), 3, 1);
-	trialtext.statusflagregion->DrawAlign(.06f,.09f,trialtext.statusflagregion->GetWidth(),trialtext.statusflagregion->GetHeight(), 3, 1);
+	trialtext.title->DrawAlign(.05f,PHYSICAL_HEIGHT*1.25f-0.05f,trialtext.title->GetWidth(),trialtext.title->GetHeight(), 3, 1);
+	trialtext.trialnum->DrawAlign(.06f,PHYSICAL_HEIGHT*1.25f-0.07f,trialtext.trialnum->GetWidth(),trialtext.trialnum->GetHeight(), 3, 1);
+	trialtext.statusflagtgt->DrawAlign(.06f,PHYSICAL_HEIGHT*1.25f-0.09f,trialtext.statusflagtgt->GetWidth(),trialtext.statusflagtgt->GetHeight(), 3, 1);
+	trialtext.statusflagpath->DrawAlign(.06f,PHYSICAL_HEIGHT*1.25f-0.10f,trialtext.statusflagpath->GetWidth(),trialtext.statusflagpath->GetHeight(), 3, 1);
+	trialtext.statusflagregion->DrawAlign(.06f,PHYSICAL_HEIGHT*1.25f-0.11f,trialtext.statusflagregion->GetWidth(),trialtext.statusflagregion->GetHeight(), 3, 1);
 
 }
 
@@ -1356,6 +1377,8 @@ void game_update()
 							<< score 
 							<< " points.";
 				text = Image::ImageText(text, scorestring.str().c_str(), "arial.ttf", 28, textColor, drawstruc.drawmaintext);
+
+				trialtext.trialnum = Image::ImageText(trialtext.trialnum,"Trial: END","arial.ttf",15,textColor, drawstruc.drawsecondtext);
 
 				writefinalscore = true;
 			}
