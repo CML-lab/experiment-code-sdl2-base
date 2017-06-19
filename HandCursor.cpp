@@ -192,20 +192,10 @@ void HandCursor::ClampOff()
 	clamp = 0;
 }
 
-GLfloat HandCursor::GetHitMargin()
-{
-	return hitMargin;
-}
-
-void HandCursor::SetHitMargin(GLfloat m)
-{
-	hitMargin = m;
-}
-
 
 bool HandCursor::HitTarget(Circle* targ)
 {
-	return HitTarget(targ->GetX(), targ->GetY(), hitMargin*targ->GetRadius());
+	return HitTarget(targ->GetX(), targ->GetY(), targ->GetHitMargin()*targ->GetRadius());
 }
 
 // check if the cursor path ever crossed through the target

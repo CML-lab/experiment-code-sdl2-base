@@ -218,6 +218,16 @@ GLfloat Circle::GetRadius()
 	return diameter/2;
 }
 
+GLfloat Circle::GetHitMargin()
+{
+	return hitMargin;
+}
+
+void Circle::SetHitMargin(GLfloat m)
+{
+	hitMargin = m;
+}
+
 void Circle::SetBorderWidth(GLfloat w)
 {
 	borderWidth = w;

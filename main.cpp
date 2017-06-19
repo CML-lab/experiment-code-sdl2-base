@@ -61,16 +61,6 @@ SCREEN_struct screens[NSCREEN];
 int SCREEN_WIDTH;
 int SCREEN_HEIGHT;
 
-//structure to control which screens a given texture is drawn to (for Object2D and text objects)
-typedef struct {
-	int drawtraces[NSCREEN];
-	int drawmaintext[NSCREEN];
-	int drawsecondtext[NSCREEN];
-	int drawsubtext[NSCREEN];
-} DRAWSTRUC;
-
-DRAWSTRUC drawstruc;
-
 
 HandCursor* curs[BIRDCOUNT + 1];
 HandCursor* player = NULL;
@@ -81,13 +71,10 @@ Region2D barrierRegions[NREGIONS];
 Path2D barrierPaths[NPATHS];
 Object2D* traces[NTRACES];
 Image* text = NULL;
-//Image* trialnum = NULL;
-Image* textsubwin = NULL;
 Sound* startbeep = NULL;
 Sound* scorebeep = NULL;
 Sound* errorbeep = NULL;
-SDL_Color textColor = {0, 0, 0, 1};
-SDL_Color whitetextColor = {1, 1, 1, 1};
+SDL_Color textColor = {0, 0, 0};
 DataWriter* writer = NULL;
 GameState state;
 Timer* trialTimer;
@@ -356,18 +343,6 @@ bool init()
 	char fname[50] = TRIALFILE;
 	//char dataPath[50] = DATA_OUTPUT_PATH;
 
-	//initialize draw structure parameters
-	for (a = 0; a < 3; a++)
-	{
-		drawstruc.drawtraces[a] = 0;
-		drawstruc.drawmaintext[a] = 0;
-		drawstruc.drawsecondtext[a] = 0;
-		//drawstruc.drawsubtext[a] = 0;
-	}
-	drawstruc.drawtraces[0] = 1;
-	drawstruc.drawmaintext[0] = 1;
-	drawstruc.drawsecondtext[1] = 1;
-	//drawstruc.drawsubtext[1] = 1;
 
 	//std::cerr << "Start init." << std::endl;
 
@@ -395,7 +370,7 @@ bool init()
 	/*We always want the experiment screen to be in position 0 in the matrix, but it will refer to
 	 * either the primary screen (one screen) or secondary screen (dual-screen) depending on the setup.
 	*/
-	if (nWindows == 1)
+	if (nWindows == 1 || !DUALDISP)
 	{
 		screens[0].displayIndex = 0;
 
@@ -466,45 +441,7 @@ bool init()
 			}
 		}
 
-		//set the appropriate texture draw flags for a secondary display
-		drawstruc.drawtraces[1] = 1;  //also draw onto the subwindow
-		drawstruc.drawmaintext[1] = 1; //also draw onto the subwindow
-		drawstruc.drawsecondtext[1] = 1; //draw secondary text to the experimenter window
-
-
-		/*
-		 * The code below sets up a subwindow to mirror the display into. This solution works, but behaves oddly
-		 * on the kinereach computer and also incurs some delays, potentially because of having to do so many draws.
-		 * To address these issues, we will use a more crude method of just making the secondary display window larger 
-		 * to give us a border region for writing text
-		 * /
-
-
-		//set up the sub-window that will be a mirror of the original window; this will always be the last window and will be situated on the second window
-		screens[2].bounds.x = screens[1].bounds.x;
-		screens[2].bounds.y = screens[1].bounds.y;
-		screens[2].bounds.w = screens[0].bounds.w;
-		screens[2].bounds.h = screens[0].bounds.h;
-		std::cerr << "   Subwindow: (" << screens[2].bounds.x << ',' << screens[2].bounds.y << "), " << screens[2].bounds.w << "x" << screens[2].bounds.h << std::endl;
-		screens[2].window = SDL_CreateWindow
-			( 
-			"Subwindow-Mirror", 
-			screens[2].bounds.x, 0, 
-			screens[2].bounds.w*0.75, screens[2].bounds.h*0.75, 
-			SDL_WINDOW_OPENGL | (WINDOWED ? 0 : SDL_WINDOW_BORDERLESS)
-			);
-		if (screens[2].window == NULL)
-		{
-			std::cerr << "Subwindow failed to build." << std::endl;
-			return false;
-		}
-		else
-		{
-			screens[2].glcontext = SDL_GL_CreateContext(screens[2].window);
-			std::cerr << "Subwindow built." << std::endl;
-		}
-		*/
-	}
+	}//end if nWindows > 1
 
 	SDL_GL_SetSwapInterval(0); //ask for immediate updates rather than syncing to vertical retrace
 
@@ -538,15 +475,14 @@ bool init()
 	
 	//load all the trace files
 	/* Note, for textures the draw specification is annoying: you have to draw a texture into each window/context that you want.
-	 * To that end, it is necessary to specify an array indictating that images should be drawn both to the main window and, if
-	 * available, the mirrored subwindow for the experimenter
-	*/
+	 * We will automatically generate a texture for each window; hopefully this will not cause memory issues!
+	 */
 	Image* tgttraces[NTRACES];
 
 	for (a = 0; a < NTRACES; a++)
 	{
 		sprintf(tmpstr,"%s/Trace%d.png",TRACEPATH,a);
-		tgttraces[a] = Image::LoadFromFile(tmpstr, drawstruc.drawtraces);
+		tgttraces[a] = Image::LoadFromFile(tmpstr);
 		if (tgttraces[a] == NULL)
 			std::cerr << "Image Trace" << a << " did not load." << std::endl;
 		else
@@ -581,7 +517,6 @@ bool init()
 	}
 
 	//initialize the speed bar object
-	//velBar.MakeSpeedBar(PHYSICAL_WIDTH/2, PHYSICAL_HEIGHT*3/4, 0.2, 0.02, 0.0, 2.0, 0.5, 1.5,'h');
 	velBar.MakeSpeedBar(PHYSICAL_WIDTH*3/4, PHYSICAL_HEIGHT/2, 0.02, 0.2, 0.0, 2.0, 0.5, 1.5,'v');
 	velBar.On();
 		
@@ -599,6 +534,7 @@ bool init()
 	targCircle->SetBorderWidth(0.002f);
 	targCircle->BorderOn();
 	targCircle->Off();
+	targCircle->SetHitMargin(3.0f);
 	
 	photosensorCircle = new Circle(0.0f,0.24,0.05,blkColor);
 	photosensorCircle->SetBorderColor(blkColor);
@@ -709,7 +645,7 @@ bool init()
 	errorbeep = new Sound("Resources/errorbeep1.wav");
 
 	//set up placeholder text
-	text = Image::ImageText(text, " ","arial.ttf", 28, textColor, drawstruc.drawmaintext);
+	text = Image::ImageText(text, " ","arial.ttf", 28, textColor);
 	text->Off();
 
 	//set up trial number text image
@@ -717,15 +653,13 @@ bool init()
 	//trialnum->On();
 
 	//setup experimenter display text
-	trialtext.title = Image::ImageText(trialtext.title,"Trial Information","arial.ttf",20,textColor, drawstruc.drawsecondtext);
+	trialtext.title = Image::ImageText(trialtext.title,"Trial Information","arial.ttf",24,textColor);
 	std::stringstream texttn;
 	texttn << "Trial 1 of " << NTRIALS;
-	trialtext.trialnum = Image::ImageText(trialtext.trialnum,texttn.str().c_str(),"arial.ttf",15,textColor, drawstruc.drawsecondtext);
-	trialtext.statusflagpath = Image::ImageText(trialtext.statusflagpath,"Hit Path: False","arial.ttf",15,textColor, drawstruc.drawsecondtext);
-	trialtext.statusflagregion = Image::ImageText(trialtext.statusflagregion,"Hit Region: False","arial.ttf",15,textColor, drawstruc.drawsecondtext);
-	trialtext.statusflagtgt = Image::ImageText(trialtext.statusflagtgt,"Hit Target: False","arial.ttf",15,textColor, drawstruc.drawsecondtext);
-
-	textsubwin = Image::ImageText(textsubwin,"SubWindow","arial.ttf",28,textColor, drawstruc.drawsubtext);
+	trialtext.trialnum = Image::ImageText(trialtext.trialnum,texttn.str().c_str(),"arial.ttf",18,textColor);
+	trialtext.statusflagpath = Image::ImageText(trialtext.statusflagpath,"Hit Path: False","arial.ttf",18,textColor);
+	trialtext.statusflagregion = Image::ImageText(trialtext.statusflagregion,"Hit Region: False","arial.ttf",18,textColor);
+	trialtext.statusflagtgt = Image::ImageText(trialtext.statusflagtgt,"Hit Target: False","arial.ttf",18,textColor);
 
 
 	hoverTimer = new Timer();
@@ -770,12 +704,12 @@ static void setup_opengl()
 	
 
 	//set up the secondary display if available
-	if (nWindows > 1)
+	if (nWindows > 1 && DUALDISP)
 	{
 		//set up the full window display
 		SDL_GL_MakeCurrent(screens[1].window,screens[1].glcontext);
 
-		glClearColor(0.5, 0.5, 0.5, 0);
+		glClearColor(0.7, 0.7, 0.7, 0);
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
@@ -794,30 +728,7 @@ static void setup_opengl()
 		glEnable(GL_LINE_SMOOTH);
 		glEnable(GL_POLYGON_SMOOTH);
 
-
-		/*
-		//set up the subwindow mirror
-		SDL_GL_MakeCurrent(screens[2].window,screens[2].glcontext);
-
-		glClearColor(1, 1, 1, 0);
-
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-
-		/* This is a mirror of the original display screen, so it will have the same physical dimensions 
-		* defined by PHYSICAL_WIDTH and PHYSICAL_HEIGHT (config.h). This will be exactly the mirror image of what is on screen, so 
-		* it shows what the participant sees through the mirror. If the mirrored flag is not set, this screen will appear backwards.
-		* /
-		glOrtho(MIRRORED ? 0 : PHYSICAL_WIDTH, MIRRORED ? PHYSICAL_WIDTH : 0,
-			0, PHYSICAL_HEIGHT, -1.0f, 1.0f);
-
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		glEnable(GL_LINE_SMOOTH);
-		glEnable(GL_POLYGON_SMOOTH);
-		*/
-	}
+	} //end if nWindows > 1
 
 
 }
@@ -1095,9 +1006,9 @@ void game_update()
 					traces[curtr.trace]->On();
 				}
 
-				trialtext.statusflagpath = Image::ImageText(trialtext.statusflagpath,"Hit Path: False","arial.ttf",15,textColor, drawstruc.drawsecondtext);
-				trialtext.statusflagregion = Image::ImageText(trialtext.statusflagregion,"Hit Region: False","arial.ttf",15,textColor, drawstruc.drawsecondtext);
-				trialtext.statusflagtgt = Image::ImageText(trialtext.statusflagtgt,"Hit Target: False","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+				trialtext.statusflagpath = Image::ImageText(trialtext.statusflagpath,"Hit Path: False","arial.ttf",15,textColor);
+				trialtext.statusflagregion = Image::ImageText(trialtext.statusflagregion,"Hit Region: False","arial.ttf",15,textColor);
+				trialtext.statusflagtgt = Image::ImageText(trialtext.statusflagtgt,"Hit Target: False","arial.ttf",15,textColor);
 
 
 				std::cerr << "Leaving IDLE state." << std::endl;
@@ -1216,7 +1127,7 @@ void game_update()
 				barrierPaths[curtr.path].SetPathColor(orangeColor);
 				
 				if (!hitPath)
-					trialtext.statusflagpath = Image::ImageText(trialtext.statusflagpath,"Hit Path: True","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+					trialtext.statusflagpath = Image::ImageText(trialtext.statusflagpath,"Hit Path: True","arial.ttf",15,textColor);
 				
 				hitPath = true;
 			}
@@ -1227,7 +1138,7 @@ void game_update()
 				barrierRegions[curtr.region].SetRegionColor(orangeColor);
 				
 				if (!hitRegion)
-					trialtext.statusflagregion = Image::ImageText(trialtext.statusflagregion,"Hit Region: True","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+					trialtext.statusflagregion = Image::ImageText(trialtext.statusflagregion,"Hit Region: True","arial.ttf",15,textColor);
 				
 				hitRegion = true;
 			}
@@ -1239,7 +1150,7 @@ void game_update()
 				targCircle->SetColor(targHitColor);
 
 				if (!hitTarget)
-					trialtext.statusflagtgt = Image::ImageText(trialtext.statusflagtgt,"Hit Target: True","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+					trialtext.statusflagtgt = Image::ImageText(trialtext.statusflagtgt,"Hit Target: True","arial.ttf",15,textColor);
 
 				hitTarget = true;
 				
@@ -1329,7 +1240,7 @@ void game_update()
 
 				texttn.str("");
 				texttn << "Trial: " << CurTrial+1 << " of " << NTRIALS;
-				trialtext.trialnum = Image::ImageText(trialtext.trialnum,texttn.str().c_str(),"arial.ttf",15,textColor, drawstruc.drawsecondtext);
+				trialtext.trialnum = Image::ImageText(trialtext.trialnum,texttn.str().c_str(),"arial.ttf",15,textColor);
 
 				std::cerr << "Trial " << CurTrial << " ended at " << SDL_GetTicks() << std::endl;
 
@@ -1376,9 +1287,9 @@ void game_update()
 				scorestring << "You earned " 
 							<< score 
 							<< " points.";
-				text = Image::ImageText(text, scorestring.str().c_str(), "arial.ttf", 28, textColor, drawstruc.drawmaintext);
+				text = Image::ImageText(text, scorestring.str().c_str(), "arial.ttf", 28, textColor);
 
-				trialtext.trialnum = Image::ImageText(trialtext.trialnum,"Trial: END","arial.ttf",15,textColor, drawstruc.drawsecondtext);
+				trialtext.trialnum = Image::ImageText(trialtext.trialnum,"Trial: END","arial.ttf",15,textColor);
 
 				writefinalscore = true;
 			}

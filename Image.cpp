@@ -4,7 +4,7 @@
 #include <iostream>
 
 
-Image::Image(SDL_Surface* surface, int wins[], float ratio)
+Image::Image(SDL_Surface* surface, float ratio)
 {
 
 	/*This function converts an SDL surface directly to an openGL texture, rather than using the SDL_Renderer.
@@ -47,8 +47,6 @@ Image::Image(SDL_Surface* surface, int wins[], float ratio)
 	//create a texture for each specified window/context
 	for (int a = 0; a < NSCREEN; a++)
 	{
-		if(wins[a] == 0)
-			continue;
 
 		SDL_GL_MakeCurrent(screens[a].window, screens[a].glcontext);
 
@@ -68,7 +66,7 @@ Image::Image(SDL_Surface* surface, int wins[], float ratio)
 
 }
 
-Image* Image::LoadFromFile(char* filePath, int wins[])
+Image* Image::LoadFromFile(char* filePath)
 {
 	SDL_Surface* surface = IMG_Load(filePath);
 	if (surface == NULL) // failed to load file
@@ -77,7 +75,7 @@ Image* Image::LoadFromFile(char* filePath, int wins[])
 	}
 	else
 	{
-		Image* image = new Image(surface, wins);
+		Image* image = new Image(surface);
 		SDL_FreeSurface(surface);
 		return image;
 	}
@@ -86,7 +84,7 @@ Image* Image::LoadFromFile(char* filePath, int wins[])
 }
 
 
-Image* Image::ImageText(Image* txt, const char* txtstr, const std::string& fonttype, int fontsize, SDL_Color fontcolor, int wins[])
+Image* Image::ImageText(Image* txt, const char* txtstr, const std::string& fonttype, int fontsize, SDL_Color fontcolor)
 {
 	/* To create text, call a render function from SDL_ttf and use it to create
 	 * an Image object. See http://www.libsdl.org/projects/SDL_ttf/docs/SDL_ttf.html#SEC42
@@ -107,8 +105,10 @@ Image* Image::ImageText(Image* txt, const char* txtstr, const std::string& fontt
 	font = TTF_OpenFont(fontstr.c_str(), fontsize);
 	//std::cerr << font << std::endl;
 
-	txt = new Image(TTF_RenderText_Blended(font, txtstr, fontcolor), wins);
-
+	txt = new Image(TTF_RenderText_Blended(font, txtstr, fontcolor));
+	//txt = new Image(TTF_RenderText_Shaded(font, txtstr, fontcolor, bgcolor));
+	//txt = new Image(TTF_RenderText_Solid(font, txtstr, fontcolor));
+	
 	//text = true;
 
 	//std::cerr << fontstr << std::endl;

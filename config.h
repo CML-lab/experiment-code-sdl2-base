@@ -45,9 +45,9 @@
 #define SAMPRATE 130
 //1 out of every REPORTRATE samples will be acquired from the trakSTAR, when in Synchronous mode
 #define REPORTRATE 1
-#define FILTER_WIDE false
+#define FILTER_WIDE true
 #define FILTER_NARROW false
-#define FILTER_DC 0.0f
+#define FILTER_DC 1.0f
 
 
 //screen dimensions
@@ -83,6 +83,7 @@ extern SCREEN_struct screens[NSCREEN];
 //switch WINDOWED and MIRRORED for kinereach/simulation runs
 #define WINDOWED  false
 #define MIRRORED  true
+#define DUALDISP true
 // screen ratio, in meters per pixel
 #define PHYSICAL_RATIO  (PHYSICAL_WIDTH / SCREEN_WIDTH)
 //#define PHYSICAL_RATIOI  (SCREEN_WIDTH/PHYSICAL_WIDTH)

@@ -29,6 +29,7 @@ protected:
 	GLint drawOn; // controls whether the object will be drawn or not
 	GLfloat borderWidth;
 	GLfloat borderColor[3];
+	GLfloat hitMargin;
 
 public:
 	// constructor
@@ -41,7 +42,9 @@ public:
 	void SetDiameter(GLfloat diam);
 	void SetRadius(GLfloat rad);
 	void SetPos(GLfloat x, GLfloat y);
+	void SetHitMargin(GLfloat m = 1.0f);  //set the multiplication factor for the target radius used to determine a Hit (default = 1.0f)
 	void SetVel(GLfloat vx, GLfloat vy);	//set a fixed x,y velocity of the circle (for pursuit targets)
+
 
 	// draw the circle
 	void Draw();
@@ -59,6 +62,7 @@ public:
 	GLfloat GetY();
 	GLfloat GetDiam();
 	GLfloat GetRadius();
+	GLfloat GetHitMargin();  //returns the multiplication factor for the target radius used to determine a Hit
 
 	void BorderOn();
 	void BorderOff();

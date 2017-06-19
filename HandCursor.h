@@ -27,12 +27,11 @@ private:
 
 	GLfloat rotMat[4]; //rotation matrix
 
-	GLfloat hitMargin;
-
 	GLint clamp; // controls whether clamp is on
 	GLfloat thetaClamp; // clamp angle
 
 	using Circle::Explode;  //make function private
+	using Circle::hitMargin; //make variable private
 
 public:
 	//constructor function call: inherit from Circle
@@ -48,11 +47,9 @@ public:
 	GLfloat GetXVel();   //returns the actual x hand velocity, non-distorted
 	GLfloat GetYVel();   //returns the actual y hand velocity, non-distorted
 	GLfloat GetVel();    //returns the actual 2D hand velocity, non-distorted
-	GLfloat GetHitMargin();  //returns the multiplication factor for the target radius used to determine a Hit
 
 	void UpdatePos(GLfloat x, GLfloat y);  //input is the actual hand position (non-distorted); saves both the true hand position and updates the potentially distorted cursor position. also recalculates the instantaneous hand velocity. overrides "UpdatePos" in Circle class
 
-	void SetHitMargin(GLfloat m = 1.0f);  //set the multiplication factor for the target radius used to determine a Hit (default = 1.0f)
 	void SetRotation(GLfloat theta); // set rotation angle in degrees CW
 	void SetOrigin(GLfloat x, GLfloat y); // set origin around which rotation occurs
 
