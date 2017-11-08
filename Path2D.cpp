@@ -20,11 +20,11 @@ void Path2D::SetNVerts(GLint sides)
 		nVerts = 8;
 }
 
-void Path2D::SetPathVerts(GLfloat Verts[][6])
+void Path2D::SetPathVerts(GLfloat Verts[][7])
 {
 	for (int i = 0; i < nVerts; i++)
 	{
-		for (int j = 0; j < 6; j++)
+		for (int j = 0; j < 7; j++)
 		{
 			Vertices[i][j] = Verts[i][j];
 		}
@@ -67,13 +67,38 @@ GLint Path2D::GetPathNVerts()
 	return(nVerts);
 }
 
+GLfloat Path2D::GetPathCenterX()
+{
+	return(xcenter);
+}
+
+GLfloat Path2D::GetPathCenterY()
+{
+	return(ycenter);
+}
+
+GLfloat Path2D::GetPathCenteredVert(GLint i, GLint j)
+{
+	GLfloat tmpvertices[7];
+	tmpvertices[0] = Vertices[i][0]+xcenter;
+	tmpvertices[1] = Vertices[i][1]+ycenter;
+	tmpvertices[2] = Vertices[i][2]+xcenter;
+	tmpvertices[3] = Vertices[i][3]+ycenter;
+	tmpvertices[4] = Vertices[i][4];
+	tmpvertices[5] = Vertices[i][5];
+	tmpvertices[6] = Vertices[i][6];
+
+	return(tmpvertices[j]);
+}
+
+
 Path2D Path2D::LoadPathFromFile(char* filePath)
 {
 	Path2D path;
 	
 	int nVerts = 0;
 	GLfloat tmpclr[3];
-	GLfloat tmpverts[8][6];
+	GLfloat tmpverts[8][7];
 	GLfloat tmpwidth;
 	char tmpline[80] = ""; 
 
@@ -117,9 +142,9 @@ Path2D Path2D::LoadPathFromFile(char* filePath)
 	pathfile.getline(tmpline, sizeof(tmpline),'\n');
 	while(!pathfile.eof() && nVerts<10)
 	{
-			sscanf(tmpline, "%f %f %f %f %f %f", 
+			sscanf(tmpline, "%f %f %f %f %f %f %f", 
 				&tmpverts[nVerts][0], &tmpverts[nVerts][1], &tmpverts[nVerts][2], 
-				&tmpverts[nVerts][3], &tmpverts[nVerts][4], &tmpverts[nVerts][5]);
+				&tmpverts[nVerts][3], &tmpverts[nVerts][4], &tmpverts[nVerts][5], &tmpverts[nVerts][6]);
 			nVerts++;
 			pathfile.getline(tmpline, sizeof(tmpline), '\n');
 	}
@@ -139,6 +164,9 @@ void Path2D::Draw()
 {
 	
 	int nsegments = 100;
+	int i, j;
+	float x,y;
+
 
 	if(drawOn)
 	{
@@ -148,9 +176,9 @@ void Path2D::Draw()
 		glLineWidth(PathWidth/PHYSICAL_RATIO);
 		glBegin(GL_LINE_STRIP);
 
-		for (int i = 0; i < nVerts; i++)
+		for (i = 0; i < nVerts; i++)
 		{
-			if(Vertices[i][5] <= 0.1)
+			if(Vertices[i][6] <= 0.1)  //flag = 0
 			{
 				//straight line segment
 				if (i == 0)
@@ -165,7 +193,7 @@ void Path2D::Draw()
 					glVertex3f(Vertices[i][2] + xcenter, Vertices[i][3] + ycenter, 0.0f);				
 				}
 			} //end if(flag = 0), i.e., draw a straight line
-			else
+			else if(Vertices[i][6] <= 1.1)   //flag = 1
 			{
 				//semicircular arc curved line segment.  assume the user provided the proper parameters in the input file
 				//algorithm taken from http://www.allegro.cc/forums/thread/594175/715617#target
@@ -174,10 +202,10 @@ void Path2D::Draw()
 				float tangential_factor = tanf(theta);
 				float radial_factor = 1 - cosf(theta);
 
-				float x = Vertices[i][0] + xcenter + Vertices[i][2]*cosf(Vertices[i][3]);
-				float y = Vertices[i][1] + ycenter + Vertices[i][2]*sinf(Vertices[i][3]);
+				x = Vertices[i][0] + xcenter + Vertices[i][2]*cosf(Vertices[i][3]);
+				y = Vertices[i][1] + ycenter + Vertices[i][2]*sinf(Vertices[i][3]);
 
-				for (int j = 0; j < nsegments + 1; j++)
+				for (j = 0; j < nsegments + 1; j++)
 				{
 					glVertex3f(x, y, 0.0f);
 
@@ -194,8 +222,26 @@ void Path2D::Draw()
 					y += ry*radial_factor;
 				}
 
+			}
+			else if(Vertices[i][6] <= 2.1)   //flag = 2
+			{
 
-			} //end else (flag = 1, i.e., draw a curved arc)
+				float t;
+
+				//quadratic bezier curve
+				for (j = 0; j < 100; j++)
+				{
+					t = float(j)/100.0f;
+
+					x = (1.0f-t)*( (1.0f-t)*Vertices[i][0] + t*Vertices[i][2]) + (t)*( (1.0f-t)*Vertices[i][2] + t*Vertices[i][4]);
+					y = (1.0f-t)*( (1.0f-t)*Vertices[i][1] + t*Vertices[i][3]) + (t)*( (1.0f-t)*Vertices[i][3] + t*Vertices[i][5]);
+
+					glVertex3f(x, y, 0.0f);
+
+				}
+
+
+			}//end if-else Vertices[i][6] flag
 
 		}//end for(nVerts)
 		glEnd();
@@ -224,14 +270,15 @@ bool Path2D::OnPath(float xcurs, float ycurs)
 
 	//two cases: if on a straight line, or on the semicircular-arc curve.
 	bool onpath = false;
-	float x1, x2, x3, x4, x5;
+	float x1, x2, x3, x4, x5, x6;
+	float a,b,c;
 	float epsilon = PathWidth/2;
 
 
 	//iterate through each segment of the path
 	for (int i = 0; i < nVerts; i++)
 	{
-		if(Vertices[i][5] <= 0.1)
+		if(Vertices[i][6] <= 0.1)
 		{
 			//straight line segment
 			if (fabsf(Vertices[i][2] - Vertices[i][0]) < epsilon)
@@ -255,9 +302,9 @@ bool Path2D::OnPath(float xcurs, float ycurs)
 			}
 
 		}
-		else
+		else if(Vertices[i][6] <= 1.1)
 		{
-			//curved line segment: point is (radius) away from the arc center, and at an angle between start_angle and (start_angle+arc_length)
+			//semicircular arc - curved line segment: point is (radius) away from the arc center, and at an angle between start_angle and (start_angle+arc_length)
 			x1 = sqrtf( powf(xcurs - Vertices[i][0] + xcenter, 2.0f) + powf(ycurs - Vertices[i][1] + ycenter, 2.0f) );  //distance from the cursor to center of the arc
 			x2 = atan2f(ycurs - Vertices[i][1] + ycenter,xcurs - Vertices[i][0] + xcenter);	//angle of the cursor from the center of the arc
 			x2 = (x2 <= 0 ? x2 + 2*PI : x2 );  //set the angle to be between 0 and 2*pi
@@ -269,7 +316,63 @@ bool Path2D::OnPath(float xcurs, float ycurs)
 			onpath = onpath || ( (fabsf(x1 - Vertices[i][2]) < epsilon) && 
 				( (x2 > x3-x5 && x2 < x4+x5) || (x2 < x3+x5 && x2 > x4-x5) ) );
 		}
+		else if(Vertices[i][6] <= 2.1)
+		{
+			//bezier curve
+			//is the point on the bezier curve?
 
+			//solve for t for the x coordinate
+			a = (Vertices[i][0] + xcenter) - 2.0f*(Vertices[i][2] + xcenter) + (Vertices[i][4] + xcenter);
+			b = -2.0f*(Vertices[i][0] + xcenter) + 2.0f*(Vertices[i][2] + xcenter);
+			c = (Vertices[i][0] + xcenter);
+
+			if (a != 0)
+			{
+				//solution exists
+				x1 = (-b + sqrtf( b*b - 4.0f*a*c)) / (2.0f*a);
+				x1 = (x1 >= 0.0f ? x1 : -1.0f); //if the solution is not in the domain [0,1] it's not a valid solution
+				x1 = (x1 <= 1.0f ? x1 : -1.0f);
+
+				x2 = (-b - sqrtf( b*b - 4.0f*a*c)) / (2.0f*a);
+				x2 = (x2 >= 0.0f ? x2 : -1.0f); //if the solution is not in the domain [0,1] it's not a valid solution
+				x2 = (x2 <= 1.0f ? x2 : -1.0f);
+			}
+			else
+			{
+				//no solution
+				x1 = -1.0f;
+				x2 = -1.0f;
+			}
+
+			//solve for t for the y coordinate
+			a = (Vertices[i][1] + ycenter) - 2.0f*(Vertices[i][3] + ycenter) + (Vertices[i][5] + ycenter);
+			b = -2.0f*(Vertices[i][1] + ycenter) + 2*(Vertices[i][3] + ycenter);
+			c = (Vertices[i][1] + ycenter);
+
+			if (a != 0)
+			{
+				//solution exists
+				x3 = (-b + sqrtf( b*b - 4.0f*a*c)) / (2.0f*a);
+				x3 = (x3 >= 0.0f ? x3 : -1.0f); //if the solution is not in the domain [0,1] it's not a valid solution
+				x3 = (x3 <= 1.0f ? x3 : -1.0f);
+
+				x4 = (-b - sqrtf( b*b - 4.0f*a*c)) / (2.0f*a);
+				x4 = (x4 >= 0.0f ? x4 : -1.0f); //if the solution is not in the domain [0,1] it's not a valid solution
+				x4 = (x4 <= 1.0f ? x4 : -1.0f);
+			}
+			else
+			{
+				//no solution
+				x3 = -1.0f;
+				x4 = -1.0f;
+			}
+
+			//check if the solution for t exists and is common for both x and y coordinates
+			onpath = onpath || 
+				( x1 > 0 && ( (fabs(x1-x3) < epsilon) || (fabs(x1-x4) < epsilon) )) || //t(x1 value) is in the domain and matches one of the solutions for t(y value)
+				( x2 > 0 && ( (fabs(x2-x3) < epsilon) || (fabs(x2-x4) < epsilon) ));   //t(x2 value) is in the domain and matches one of the solutions for t(y value)
+
+		}
 	}
 	return(onpath);
 }
@@ -287,18 +390,25 @@ bool Path2D::PathCollision(HandCursor* cursor)
 bool Path2D::PathCollision(float xcurs, float ycurs, float xcurslast, float ycurslast)
 {
 	// calculate the intersection of 2 lines (the line connecting cursor and LastCursorPos, and any segment of the path)
-	// note, this is currently NOT written to support the semicircular curved path segments!
 	bool onpath = false;
 	float p[2], q[2], r[2], s[2], e[2];
 	float t, u, v;
 	bool tflag, vflag;
 	float epsilon = PathWidth/100;
 	float x3, x4;
+	float a,b,c;
+
+	//define seg1 as p to p+r
+	p[0] = xcurslast;
+	p[1] = ycurslast;
+	r[0] = xcurs - p[0];
+	r[1] = ycurs - p[1];
+
 
 	//iterate through each segment of the path
 	for (int i = 0; i < nVerts; i++)
 	{
-		if(Vertices[i][5] <= 0.1)
+		if(Vertices[i][6] <= 0.1)
 		{
 			//straight line segment
 			
@@ -306,12 +416,7 @@ bool Path2D::PathCollision(float xcurs, float ycurs, float xcurslast, float ycur
 			// this method uses vector cross products to determine if the two segments intersect. it should be robust to detect
 			// both intersections and also points where the cursor is on the path.
 			
-			//define seg1 as p to p+r, and seg2 as q to q+s.
-			p[0] = xcurslast;
-			p[1] = ycurslast;
-			r[0] = xcurs - p[0];
-			r[1] = ycurs - p[1];
-
+			//define seg2 as q to q+s.
 			q[0] = (Vertices[i][0] + xcenter);
 			q[1] = (Vertices[i][1] + ycenter);
 			s[0] = (Vertices[i][2] + xcenter) - q[0];
@@ -338,14 +443,9 @@ bool Path2D::PathCollision(float xcurs, float ycurs, float xcurslast, float ycur
 			}
 
 		}  //end if straight line segment
-		else //else, curved path segment
+		else if(Vertices[i][6] <= 1.1) //else, semicircular arc path segment
 		{
 			//calculate if the line will intersect the circle at all
-			p[0] = xcurslast;
-			p[1] = ycurslast;
-			r[0] = xcurs - p[0];
-			r[1] = ycurs - p[1];
-			
 			q[0] = p[0] - (Vertices[i][0] + xcenter);
 			q[1] = p[1] - (Vertices[i][1] + ycenter);
 
@@ -432,7 +532,58 @@ bool Path2D::PathCollision(float xcurs, float ycurs, float xcurslast, float ycur
 
 			} //end else 2 intersection points exist
 
-		} //end else evaluate intersection for curved path segment
+		} //end if intersection with semicircular arc segment
+		else if(Vertices[i][6] <= 2.1) //else, bezier curve
+		{
+			//calculate if the line segment and the bezier curve segment intersect
+			u = (ycurslast - xcurs) / (xcurslast - ycurs);  //slope
+			a = (Vertices[i][1] + ycenter) + 2.0f*(Vertices[i][3] + ycenter) + (Vertices[i][5] + ycenter) - u*(Vertices[i][0] + xcenter) -2.0f*u*(Vertices[i][2] + xcenter) - u*(Vertices[i][4] + xcenter);
+			b = -2.0f*(Vertices[i][1] + ycenter) -2.0f*(Vertices[i][3] + ycenter) + 2.0f*u*(Vertices[i][0] + xcenter) + 2.0f*u*(Vertices[i][2] + xcenter);
+			c = (Vertices[i][1] + ycenter) - ycurs - u*(Vertices[i][0] + xcenter) + u*xcurs;
+
+			//calculate values of t for which the line intersects the bezier curve
+			x3 = (-b + sqrtf( b*b - 4.0f*a*c))/ (2.0f*a);
+			x3 = (x3 >= 0.0f ? x3 : -1.0f); //if the solution is not in the domain [0,1] it's not a valid solution
+			x3 = (x3 <= 1.0f ? x3 : -1.0f);
+
+			x4 = (-b - sqrtf( b*b - 4.0f*a*c))/ (2.0f*a);
+			x4 = (x4 >= 0.0f ? x4 : -1.0f); //if the solution is not in the domain [0,1] it's not a valid solution
+			x4 = (x4 <= 1.0f ? x4 : -1.0f);
+
+
+			//check that the solution yields a point on the line segment
+			t = -1.0f;
+			u = -1.0f;
+			if (x3 > 0)
+			{
+				q[0] = powf(1.0f-x3,2.0f)*(Vertices[i][0] + xcenter) + 2.0f*(x3-1.0f)*x3*(Vertices[i][2] + xcenter) + x3*x3*(Vertices[i][4] + xcenter);
+				q[1] = powf(1.0f-x3,2.0f)*(Vertices[i][1] + ycenter) + 2.0f*(x3-1.0f)*x3*(Vertices[i][3] + ycenter) + x3*x3*(Vertices[i][5] + ycenter);
+
+				if (fabs(xcurslast - xcurs) > epsilon) //make sure we don't run into an INF problem
+					t = (q[0]-xcurs)/(xcurslast-xcurs);
+				else
+					t = (q[1]-ycurs)/(ycurslast-ycurs);
+				//u = (q[1]-ycurs)/(ycurslast-ycurs);
+				t = (t >= 0.0f ? t : -1.0f); //if the solution is not in the domain [0,1] it's not a valid solution
+				t = (t <= 1.0f ? t : -1.0f);
+			}
+			if (x4 > 0)
+			{
+				q[0] = powf(1.0f-x4,2.0f)*(Vertices[i][0] + xcenter) + 2.0f*(x4-1.0f)*x4*(Vertices[i][2] + xcenter) + x4*x4*(Vertices[i][4] + xcenter);
+				q[1] = powf(1.0f-x4,2.0f)*(Vertices[i][1] + ycenter) + 2.0f*(x4-1.0f)*x4*(Vertices[i][3] + ycenter) + x4*x4*(Vertices[i][5] + ycenter);
+
+				if (fabs(xcurslast - xcurs) > epsilon)
+					t = (q[0]-xcurs)/(xcurslast-xcurs);
+				else
+					t = (q[1]-ycurs)/(ycurslast-ycurs);
+				//u = (q[1]-ycurs)/(ycurslast-ycurs);
+				t = (t >= 0.0f ? t : -1.0f); //if the solution is not in the domain [0,1] it's not a valid solution
+				t = (t <= 1.0f ? t : -1.0f);
+			}
+
+			onpath = (t >= 0.0f ? true : onpath);  //if we have found a valid intersection point, set onpath to true
+
+		}
 
 	} // end for loop
 
@@ -460,7 +611,7 @@ int Path2D::HitViaPts(float xcurs, float ycurs, GLfloat dist)
 	//we will do this the "easy" way, by calculating the distance to each vertex and keeping track of the minimum
 	for (int i = 0; i < nVerts; i++)
 	{
-		if(Vertices[i][5] <= 0.1)
+		if(Vertices[i][6] <= 0.1)
 		{
 			//straight line
 			if (i == 0)
@@ -480,7 +631,7 @@ int Path2D::HitViaPts(float xcurs, float ycurs, GLfloat dist)
 				mindist = ppdist;
 			}
 		}
-		else
+		else if(Vertices[i][6] <= 1.1)
 		{
 			//arc; we have to calculate the two vertices.
 			if (i == 0)
@@ -504,9 +655,31 @@ int Path2D::HitViaPts(float xcurs, float ycurs, GLfloat dist)
 				mindist = ppdist;
 			}
 
-		}  //end else
-
-
+		}
+		else if(Vertices[i][6] <= 2.1)
+		{
+			//bezier curve; we have to calculate the two vertices.
+			if (i == 0)
+			{
+				//check also the starting vertex
+				x = Vertices[i][0] + xcenter + Vertices[i][4]*cosf(Vertices[i][5]);  //center + radius*cos(start_angle)
+				y = Vertices[i][1] + ycenter + Vertices[i][4]*sinf(Vertices[i][5]);	 //center + radius*sin(start_angle)
+				ppdist = sqrtf(powf(x - xcurs, 2.0f) + powf(y - ycurs, 2.0f));
+				if (ppdist < mindist)
+				{
+					vert = -1;
+					mindist = ppdist;
+				}
+			}
+			x = Vertices[i][0] + xcenter + Vertices[i][4]*cosf(Vertices[i][5]);	 //center + radius*cos(end_angle)
+			y = Vertices[i][1] + ycenter + Vertices[i][4]*sinf(Vertices[i][5]);	 //center + radius*sin(end_angle)
+			ppdist = sqrtf(powf(Vertices[i][4] + xcenter - xcurs, 2.0f) + powf(Vertices[i][5] + ycenter - ycurs, 2.0f));
+			if (ppdist < mindist)
+			{
+				vert = i;
+				mindist = ppdist;
+			}
+		}
 	} //end for
 
 	//now that we have the minimum distance and vertex number, determine if it is close enough to be "on" the vertex
