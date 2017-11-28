@@ -1,3 +1,28 @@
+/*
+   This object controls interactions with the Ascension tracker systems, both
+   the TrakSTAR and the Flock of Birds. It is designed to be used on either system,
+   and requires only specification of a flag (e.g., set in config.h) indicating
+   which tracker is currently connected to the machine. Unfortunately, it is not
+   able to automatically detect the Ascension system at this time.
+
+   Additional parameters may be set as flags in config.h including specification
+   as to which filters are to be turned on/off. Unless otherwise specified, the
+   tracker is initiated in polling mode (rather than streaming mode) as there is
+   currently no code to handle buffering of streamed data.
+   
+   Errors are written out to the standard error output stream (std::cerr), which 
+   is typically directed to a text file in the Debug folder.
+
+   This object utilizes a standardized data frame, TrackDATAFRAME, which is defined
+   in the InputFrame object.
+
+   This object requires three function calls: initialization of the tracking system,
+   polling for data, and shutting down the tracking system. Shutting down the system
+   properly is essential to ensure that the tracker does not end in a strange state
+   and that when possible, the transmitter is shut down to avoid overheating.
+
+*/
+
 #ifndef TRACKBIRD_H
 #define TRACKBIRD_H
 #pragma once
