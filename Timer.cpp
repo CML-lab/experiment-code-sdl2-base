@@ -128,8 +128,16 @@ bool Timer::CheckAlarm()
 		status = true;
 		//std::cerr << "Alarm: " << TRtimer->TimeToNextAlarm() << " :: " << TRtimer->RemainingTime() << std::endl;
 	}
+	else if(SDL_GetTicks()-startTime > alarmTime*(alarmSounded+1) && alarmSounded<nAlarms)
+	{
+		//if no sound file is specified and we are just using this as a countdown timer
+		alarmSounded++;
+		status = true;
+	}
+
 	if (alarmSounded>=nAlarms)
 		Stop();
+
 	return(status);
 }
 

@@ -25,6 +25,12 @@
 #define REGIONPATH "Resources/regions"
 #define NREGIONS 1
 
+
+//define the configuration file
+#define CONFIGFILE "config.txt"
+//define the rate (in ms) to acquire data from the Coda server
+#define RUNSAMPRATE 20
+
 // */
 
 

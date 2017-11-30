@@ -66,6 +66,9 @@
     <ClInclude Include="SpeedBar.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TrackCodamotion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Circle.cpp">
@@ -111,6 +114,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SpeedBar.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TrackCodamotion.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

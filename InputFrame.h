@@ -5,7 +5,7 @@
 #include "SDL_opengl.h"
 
 
-// Data type used to return input data
+// Data type used to return input data for Ascension systems
 struct TrackDATAFRAME
 {
 	int ValidInput;	
@@ -23,7 +23,16 @@ struct TrackDATAFRAME
 
 	float vel;
 
+	BYTE CodaNumCameras;
+	float CodaIntensity; //average intensity across all the cameras
+
 };
+
+
+
+
+
+
 
 
 #endif
