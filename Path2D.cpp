@@ -233,8 +233,8 @@ void Path2D::Draw()
 				{
 					t = float(j)/100.0f;
 
-					x = (1.0f-t)*( (1.0f-t)*Vertices[i][0] + t*Vertices[i][2]) + (t)*( (1.0f-t)*Vertices[i][2] + t*Vertices[i][4]);
-					y = (1.0f-t)*( (1.0f-t)*Vertices[i][1] + t*Vertices[i][3]) + (t)*( (1.0f-t)*Vertices[i][3] + t*Vertices[i][5]);
+					x = (1.0f-t)*( (1.0f-t)*(Vertices[i][0]+xcenter) + t*(Vertices[i][2]+xcenter)) + (t)*( (1.0f-t)*(Vertices[i][2]+xcenter) + t*(Vertices[i][4]+xcenter));
+					y = (1.0f-t)*( (1.0f-t)*(Vertices[i][1]+ycenter) + t*(Vertices[i][3]+ycenter)) + (t)*( (1.0f-t)*(Vertices[i][3]+ycenter) + t*(Vertices[i][5]+ycenter));
 
 					glVertex3f(x, y, 0.0f);
 
