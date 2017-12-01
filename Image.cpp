@@ -248,7 +248,7 @@ Image* Image::ImageText(Image* txt, const char* txtstr, const std::string& fontt
 	std::cerr << fontstr << std::endl;
 
 	font = TTF_OpenFont(fontstr.c_str(), fontsize);
-	std::cerr << font << std::endl;
+	//std::cerr << font << std::endl;
 
 	txt = new Image(TTF_RenderText_Blended(font, txtstr, fontcolor));
 
