@@ -1,5 +1,8 @@
 #include "TrackCodamotion.h"
 
+
+CODASYSCONFIG TrackCoda::CodaSysConfig;
+
 int TrackCoda::InitializeCoda()
 {
 	std::cerr << std::endl << "Starting CODA Initialization..." << std::endl;

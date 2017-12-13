@@ -99,7 +99,8 @@ private:
 	static CODASYSCONFIG CodaSysConfig;  
 
 public:
-	~TrackCoda() { }
+	TrackCoda();
+	~TrackCoda() { };
 	
 	static int InitializeCoda();  // initialize the system; return 0 for failed attempt, otherwise 1 for FOB or 2 for trakSTAR
 	static int GetUpdatedSample(TrackDATAFRAME DataBirdFrame[]);  // poll for a new sample for a given sensor.  return number of new samples available, or 0 if no update was made
