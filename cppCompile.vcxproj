@@ -39,9 +39,9 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\Coda\Documents\Coda\CODARTNETSDK-2.00.06.00\include\;$(ProjectDir)\trakSTAR;$(ProjectDir)\FTDI;$(ProjectDir)\SDL2-2.0.5\include;$(ProjectDir)\Flock_of_Birds;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\Coda\Documents\Coda\CODARTNETSDK-2.00.06.00\lib;$(ProjectDir)\trakSTAR;$(ProjectDir)\SDL2-2.0.5\lib\x86;$(ProjectDir)\FTDI\i386;$(ProjectDir)\Flock_of_Birds;$(LibraryPath)</LibraryPath>
-    <SourcePath>C:\Users\Coda\Documents\Coda\CODARTNETSDK-2.00.06.00\source\;$(ProjectDir)\FTDI;$(SourcePath)</SourcePath>
+    <IncludePath>C:\Users\Research Staff\Documents\cpp code\Coda\CODARTNETSDK-2.00.06.00\include;$(ProjectDir)\trakSTAR;$(ProjectDir)\FTDI;$(ProjectDir)\SDL2-2.0.5\include;$(ProjectDir)\Flock_of_Birds;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\Research Staff\Documents\cpp code\Coda\CODARTNETSDK-2.00.06.00\lib;$(ProjectDir)\trakSTAR;$(ProjectDir)\SDL2-2.0.5\lib\x86;$(ProjectDir)\FTDI\i386;$(ProjectDir)\Flock_of_Birds;$(LibraryPath)</LibraryPath>
+    <SourcePath>C:\Users\Research Staff\Documents\cpp code\Coda\CODARTNETSDK-2.00.06.00\source\;$(ProjectDir)\FTDI;$(SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -53,13 +53,13 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\Coda\Documents\Coda\CODARTNETSDK-2.00.06.00\include\;$(ProjectDir)\trakSTAR;$(ProjectDir)\SDL2-2.0.5\include;$(ProjectDir)\FTDI;$(ProjectDir)\Flock_of_Birds;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Research Staff\Documents\cpp code\Coda\CODARTNETSDK-2.00.06.00\include\;$(ProjectDir)\trakSTAR;$(ProjectDir)\SDL2-2.0.5\include;$(ProjectDir)\FTDI;$(ProjectDir)\Flock_of_Birds;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\Coda\Documents\Coda\CODARTNETSDK-2.00.06.00\lib;$(ProjectDir)\trakSTAR;$(ProjectDir)\SDL2-2.0.5\lib\x86;$(ProjectDir)\FTDI\i386;$(ProjectDir)\Flock_of_Birds;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;glu32.lib;SDL2.lib;SDL2main.lib;SDL2_mixer.lib;SDL2_ttf.lib;SDL2_image.lib;Bird.lib;ftd2xx.lib;ATC3DG.lib;codaRTNetProtocol.dll;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\Research Staff\Documents\cpp code\Coda\CODARTNETSDK-2.00.06.00\lib;$(ProjectDir)\trakSTAR;$(ProjectDir)\SDL2-2.0.5\lib\x86;$(ProjectDir)\FTDI\i386;$(ProjectDir)\Flock_of_Birds;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;glu32.lib;SDL2.lib;SDL2main.lib;SDL2_mixer.lib;SDL2_ttf.lib;SDL2_image.lib;Bird.lib;ftd2xx.lib;ATC3DG.lib;codaRTNetProtocol.lib;codaRTNetProtocolCPP_VC10SR.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

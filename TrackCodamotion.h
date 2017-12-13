@@ -62,7 +62,7 @@ struct CODASYSCONFIG
 	bool bNI6221enabled;
 
     int MonitorPeriod; //ms
-	const int UDPbufferSize = 100000;
+	static const int UDPbufferSize = 100000;
 
 	DWORD cx1mode;
     DWORD cx1decim;
@@ -103,40 +103,16 @@ public:
 	
 	static int InitializeCoda();  // initialize the system; return 0 for failed attempt, otherwise 1 for FOB or 2 for trakSTAR
 	static int GetUpdatedSample(TrackDATAFRAME DataBirdFrame[]);  // poll for a new sample for a given sensor.  return number of new samples available, or 0 if no update was made
-	static bool ShutDownCoda();    // shut down the system; return false for failed attempt, otherwise true
+	static int ShutDownCoda();    // shut down the system; return false for failed attempt, otherwise true
 
 	static void print_alignment_status(const DWORD* marker_id_array,  const codaRTNet::DeviceInfoAlignment& info);
 	static void print_devicestatusarray_errors(const codaRTNet::DeviceStatusArray& array);
-	static DWORD getfirstdeverror(const codaRTNet::DeviceStatusArray& arr)
+	static DWORD getfirstdeverror(const codaRTNet::DeviceStatusArray& arr);
+
 };
 
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 #endif
+
+

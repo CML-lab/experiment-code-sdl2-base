@@ -310,7 +310,7 @@ int TrackCoda::InitializeCoda()
 
 
     if(CodaSysConfig.bExtSync)
-       std::cerr << " External synching selected. Be sure that External sampling frequency does not exceed " << cx1mode << " Hz." << std::endl;
+       std::cerr << " External synching selected. Be sure that External sampling frequency does not exceed " << CodaSysConfig.cx1mode << " Hz." << std::endl;
 	else
       if(CodaSysConfig.cx1decim < 1 || CodaSysConfig.cx1decim > 9)
          CodaSysConfig.cx1decim = 1;
@@ -583,7 +583,7 @@ int TrackCoda::GetUpdatedSample(TrackDATAFRAME DataCodaFrame[])
 
 }
 
-bool TrackCoda::ShutDownCoda()
+int TrackCoda::ShutDownCoda()
 {
 
 	// stop acquisition if still in progress
@@ -760,6 +760,8 @@ bool TrackCoda::ShutDownCoda()
 	CodaSysConfig.cl.stopSystem();
 
 
+	return(0);
+
 }
 
 
@@ -781,7 +783,7 @@ void TrackCoda::print_alignment_status(const DWORD* marker_id_array,  const coda
 			std::cerr << "already acquiring (is another program running?";
 			break;
 		case CODANET_ALIGNMENTERROR_OCCLUSIONS:
-			std::cerr << "occlusions.");
+			std::cerr << "occlusions.";
 			break;
 		case CODANET_ALIGNMENTERROR_XTOOCLOSE:
 			std::cerr << "x-axis markers too close.";
