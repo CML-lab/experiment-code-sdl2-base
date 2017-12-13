@@ -1,0 +1,14 @@
+Install Visual Studio in the following order:
+
+1. Initial VS2010 install.
+	vc_web.exe
+
+2. Install the SDK 7.1 (Matlab uses this compiler, so if you intend to compile mex or simulink code and want Matlab to be happy you need to install this now.)
+	winsdk_web.exe
+
+3. Install VS2010 Service Pack 1 - this fixes some compilation problems so it's good to have.
+	VS10sp1-KB983509.exe
+
+4. Installing VS2010 SP1 disables the SDK's 64-bit compiler. Install the compiler update to fix this problem.
+	VC-Compiler-KB2519277.exe
+
