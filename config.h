@@ -27,7 +27,7 @@
 
 
 //define the configuration file
-#define CONFIGFILE "config.txt"
+#define CONFIGFILE "codaconfig.txt"
 
 // */
 

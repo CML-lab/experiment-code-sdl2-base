@@ -5,6 +5,7 @@ Release/
 main_*
 Data/
 *.dat
+*.coda
 *.sdf
 *.suo
 *.user

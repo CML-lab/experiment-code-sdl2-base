@@ -9,12 +9,10 @@
 
 using namespace std;
 
-DataWriter::DataWriter(CODASYSCONFIG *sysconfig, const char* filename)
+DataWriter::DataWriter(CODASYSCONFIG *sysconfig, tm* ltm, const char* filename)
 {
 
 	//record current date/time
-	time_t current_time = time(0);
-	tm* ltm = localtime(&current_time);
 	stringstream ss1, ss2, ss3;
 	
 	ss1 << setw(4) << setfill('0') << ltm->tm_year + 1900;

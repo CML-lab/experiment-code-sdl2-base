@@ -23,6 +23,7 @@
 #include "SpeedBar.h"
 #include "Timer.h"
 #include "Image.h"
+#include "TargetFrame.h"
 
 #include "config.h"
 
@@ -78,6 +79,9 @@ GameState state;
 Timer* trialTimer;
 Timer* hoverTimer;
 Timer* movTimer;
+
+//time/date var
+tm* expdatetime;
 
 //Uint32 gameTimer;
 //Uint32 hoverTimer;
@@ -534,7 +538,10 @@ bool init()
 
 	std::cerr << "SavFileName: " << fname << std::endl;
 
-	writer = new DataWriter(&sysconfig,fname);  //set up the data-output file
+	time_t current_time = time(0);
+	expdatetime = localtime(&current_time);
+
+	writer = new DataWriter(&sysconfig,expdatetime,fname);  //set up the data-output file
 
 
 	// set up the cursors
@@ -623,6 +630,8 @@ static void setup_opengl()
 //end the program; clean up everything neatly.
 void clean_up()
 {
+	std::cerr << "Shutting down..." << std::endl;
+
 	delete startCircle;
 	delete targCircle;
 	delete scorebeep;
@@ -645,8 +654,8 @@ void clean_up()
 	Mix_CloseAudio();
 	TTF_Quit();
 	SDL_Quit();
-	if (trackstatus > 0)
-		TrackCoda::ShutDownCoda(&sysconfig);
+	if (trackstatus == 0)
+		TrackCoda::ShutDownCoda(&sysconfig,expdatetime);
 
 	freopen( "CON", "w", stderr );
 

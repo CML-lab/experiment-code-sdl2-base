@@ -612,7 +612,7 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
 
 }
 
-int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig)
+int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig,tm* ltm)
 {
 
 	// stop acquisition if still in progress
@@ -651,8 +651,8 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig)
 	savfile.replace(savfile.rfind("."),4,"_data");
 	//std::strcpy(datafile,savfile.c_str());
 
-	time_t current_time = time(0);
-	tm* ltm = localtime(&current_time);
+	//time_t current_time = time(0);
+	//tm* ltm = localtime(&current_time); //use the same date and time as the DataWriter-written event file
 	std::stringstream ss1, ss2, ss3;
 	
 	ss1 << std::setw(4) << std::setfill('0') << ltm->tm_year + 1900;
@@ -663,7 +663,7 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig)
 	ss2 << std::setw(2) << std::setfill('0') << ltm->tm_min;
 	ss2 << std::setw(2) << std::setfill('0') << ltm->tm_sec;
 
-	ss3 << savfile.c_str() << "_" << ss1.str() << ss2.str() << ".dat";
+	ss3 << savfile.c_str() << "_" << ss1.str() << ss2.str() << ".coda";
 
     // open output datafile:
     //FILE* fp = 0; 
@@ -787,8 +787,8 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig)
 
 	
 	// shutdown system before exiting:
-	std::cerr << "Shutting down CODA system..." << std::endl;
 	CodaSysConfig->cl.stopSystem();
+	std::cerr << "CODA system shut down!" << std::endl;
 
 
 	return(0);

@@ -18,7 +18,7 @@ public:
 	 * a name will be generated automatically.
 	 */
 	//DataWriter(TrackSYSCONFIG *sysconfig, const char* filename = NULL);
-	DataWriter(CODASYSCONFIG *sysconfig, const char* filename = NULL);
+	DataWriter(CODASYSCONFIG *sysconfig,tm* ltm, const char* filename = NULL);
 	DataWriter();
 	~DataWriter();
 	// Record a new line of data
