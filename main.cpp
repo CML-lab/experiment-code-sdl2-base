@@ -59,7 +59,7 @@ SDL_Event event;
 SDL_Window *screen = NULL;
 SDL_GLContext glcontext = NULL;
 
-HandCursor* curs[BIRDCOUNT + 1];
+HandCursor* curs[CODACOUNT + 1];
 HandCursor* player = NULL;
 Circle* startCircle = NULL;
 Circle* targCircle = NULL;
@@ -92,8 +92,9 @@ bool sensorsActive;
 
 //tracker variables
 int trackstatus;
-TrackSYSCONFIG sysconfig;
-TrackDATAFRAME dataframe[BIRDCOUNT+1];
+//TrackSYSCONFIG sysconfig;
+CODASYSCONFIG sysconfig;
+TrackDATAFRAME dataframe[CODACOUNT+1];
 Uint32 DataStartTime = 0;
 
 //variables to compute the earned score
@@ -181,10 +182,11 @@ int main(int argc, char* args[])
 		int inputs_updated = 0;
 
 		// Retrieve Flock of Birds data
-		if (trackstatus>0)
+		if (trackstatus==0)
 		{
 			// Update inputs from Flock of Birds
-			inputs_updated = TrackBird::GetUpdatedSample(&sysconfig,dataframe);
+			//inputs_updated = TrackBird::GetUpdatedSample(&sysconfig,dataframe);
+			inputs_updated = TrackCoda::GetUpdatedSample(&sysconfig,dataframe);
 		}
 
 		// Handle SDL events
@@ -193,7 +195,7 @@ int main(int argc, char* args[])
 			// See http://www.libsdl.org/docs/html/sdlevent.html for list of event types
 			if (event.type == SDL_MOUSEMOTION)
 			{
-				if (trackstatus <= 0)
+				if (trackstatus != 0)
 				{
 					MouseInput::ProcessEvent(event);
 					inputs_updated = MouseInput::GetFrame(dataframe);
@@ -239,14 +241,23 @@ int main(int argc, char* args[])
 				Target.PSstatus = -99;
 
 			//updatedisplay = true;
-			for (int a = ((trackstatus>0) ? 1 : 0); a <= ((trackstatus>0) ? BIRDCOUNT : 0); a++)
+			for (int a = ((trackstatus>0) ? 1 : 0); a <= ((trackstatus>0) ? CODACOUNT : 0); a++)
 			{
 				if (dataframe[a].ValidInput)
 				{
-					curs[a]->UpdatePos(dataframe[a].x,dataframe[a].y);
-					dataframe[a].vel = curs[a]->GetVel();
+					if (a == HAND)
+					{
+						curs[0]->UpdatePos(dataframe[a].x,dataframe[a].y);
+						dataframe[a].vel = curs[0]->GetVel();
+					}
+					else
+						dataframe[a].vel = -1;
+
 					writer->Record(a, dataframe[a], Target);
 				}
+
+				//if this marker will be used to drive the cursor, set the cursor position using it
+
 			}
 
 		}
@@ -329,11 +340,14 @@ bool init()
 
 	std::cerr << std::endl;
 
-	trackstatus = TrackBird::InitializeBird(&sysconfig);
-	if (trackstatus <= 0)
-		std::cerr << "Tracker failed to initialize. Mouse Mode." << std::endl;
+	//trackstatus = TrackBird::InitializeBird(&sysconfig);
+	trackstatus = TrackCoda::InitializeCoda(&sysconfig);
+	if (trackstatus > 0)
+		std::cerr << "CODA Tracker failed to initialize. Switching to mouse mode." << std::endl;
+	else
+		std::cerr << "CODA Tracker Initialized!" << std::endl;
 
-	std::cerr << std::endl;
+	std::cerr << std::endl << std::endl;
 
 	// Initialize SDL, OpenGL, SDL_mixer, and SDL_ttf
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
@@ -400,7 +414,7 @@ bool init()
 			std::cerr << "Image Trace" << a << " did not load." << std::endl;
 		else
 		{
-			traces[a] = new Object2D(tgttraces[a]);
+			traces[a] = new Object2D(tgttraces[a],&sysconfig);
 			std::cerr << "   Trace " << a << " loaded." << std::endl;
 			traces[a]->SetPos(PHYSICAL_WIDTH / 2, PHYSICAL_HEIGHT / 2);
 		}
@@ -464,18 +478,18 @@ bool init()
 	//  in SetSensorBitBang() ). The bits in the lower nibble should be set to 1 initially to be active lines.
 
 	status = Ftdi::InitFtdi(devNum,&ftHandle,1,Mask);
-	std::cerr << "PhotoSensor: " << status << std::endl;
-
-	Ftdi::SetFtdiBitBang(ftHandle,Mask,3,0);
-
-	UCHAR dataBit;
-
-	FT_GetBitMode(ftHandle, &dataBit);
-	
-	std::cerr << "DataByte: " << std::hex << dataBit << std::dec << std::endl;
-	
-	if (status==0)
+	if (status == 0)
 	{
+		std::cerr << "PhotoSensor: " << status << std::endl;
+
+		Ftdi::SetFtdiBitBang(ftHandle,Mask,3,0);
+
+		UCHAR dataBit;
+
+		FT_GetBitMode(ftHandle, &dataBit);
+	
+		std::cerr << "DataByte: " << std::hex << dataBit << std::dec << std::endl;
+
 		printf("PhotoSensor found and opened.\n");
 		sensorsActive = true;
 	}
@@ -524,12 +538,16 @@ bool init()
 
 
 	// set up the cursors
+
+	curs[0] = new HandCursor(curtr.startx, curtr.starty, CURSOR_RADIUS*2, cursColor, &sysconfig);
+	curs[0]->SetOrigin(curtr.startx, curtr.starty);
+	player = curs[0];
+
+	/*
 	if (trackstatus > 0)
 	{
-		/* Assign birds to the same indices of controller and cursor that they use
-		* for the Flock of Birds
-		*/
-		for (a = 1; a <= BIRDCOUNT; a++)
+		
+		for (a = 1; a <= CURSORCOUNT; a++)
 		{
 			curs[a] = new HandCursor(curtr.startx, curtr.starty, CURSOR_RADIUS*2, cursColor);
 			curs[a]->BorderOff();
@@ -546,7 +564,7 @@ bool init()
 		curs[0]->SetOrigin(curtr.startx, curtr.starty);
 		player = curs[0];
 	}
-
+	*/
 
 	player->On();
 
@@ -628,7 +646,7 @@ void clean_up()
 	TTF_Quit();
 	SDL_Quit();
 	if (trackstatus > 0)
-		TrackBird::ShutDownBird(&sysconfig);
+		TrackCoda::ShutDownCoda(&sysconfig);
 
 	freopen( "CON", "w", stderr );
 

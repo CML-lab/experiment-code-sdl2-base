@@ -5,6 +5,7 @@
 #include "SDL.h"
 #include "SDL_opengl.h"
 #include "Image.h"
+#include "TrackCodamotion.h"
 #define NO2DHIST 5
 
 // Stores an Image along with position and rotation information
@@ -21,10 +22,11 @@ private:
 	GLfloat angle;
 	GLfloat sizex;
 	GLfloat sizey;
+	GLfloat samprate;
 	//GLint drawOn;
 public:
 	// i is the image to be displayed
-	Object2D(Image* i);
+	Object2D(Image* i,CODASYSCONFIG *CodaSysConfig);
 	~Object2D() { }
 	GLfloat GetWidth() const; 	// Gets the default width (meters) of the image
 	GLfloat GetHeight() const; 	// Gets the default height (meters) of the image

@@ -87,7 +87,6 @@
     <ClInclude Include="HandCursor.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="InputFrame.h" />
-    <ClInclude Include="JoystickInput.h" />
     <ClInclude Include="MouseInput.h" />
     <ClInclude Include="Object2D.h" />
     <ClInclude Include="Path2D.h" />
@@ -96,7 +95,6 @@
     <ClInclude Include="SpeedBar.h" />
     <ClInclude Include="TargetFrame.h" />
     <ClInclude Include="Timer.h" />
-    <ClInclude Include="TrackBird.h" />
     <ClInclude Include="TrackCodamotion.h" />
   </ItemGroup>
   <ItemGroup>
@@ -105,7 +103,6 @@
     <ClCompile Include="FTDI\FTDI.cpp" />
     <ClCompile Include="HandCursor.cpp" />
     <ClCompile Include="Image.cpp" />
-    <ClCompile Include="JoystickInput.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MouseInput.cpp" />
     <ClCompile Include="Object2D.cpp" />
@@ -114,7 +111,6 @@
     <ClCompile Include="Sound.cpp" />
     <ClCompile Include="SpeedBar.cpp" />
     <ClCompile Include="Timer.cpp" />
-    <ClCompile Include="TrackBird.cpp" />
     <ClCompile Include="TrackCodamotion.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

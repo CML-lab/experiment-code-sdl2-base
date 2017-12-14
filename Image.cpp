@@ -252,7 +252,7 @@ Image* Image::ImageText(Image* txt, const char* txtstr, const std::string& fontt
 
 	txt = new Image(TTF_RenderText_Blended(font, txtstr, fontcolor));
 
-	std::cerr << fontstr << std::endl;
+	//std::cerr << fontstr << std::endl;
 
 	TTF_CloseFont(font);
 

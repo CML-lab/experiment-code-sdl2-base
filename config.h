@@ -8,8 +8,8 @@
 
 //set this to the data path in which the current set of data for this block should be stored.
 
-//set this parameter to determine the active sensor to record from. 3 is the right hand, 1 is the left hand. 4 is for the LED-tracker. 0 is the mouse.
-#define HAND 3
+//set this parameter to determine the active sensor to record from.
+#define HAND 1
 
 //define the file that contains the name of the trial table
 #define TRIALFILE "test.txt"  
@@ -19,7 +19,7 @@
 #define TRACEPATH "Resources/traces"
 #define NTRACES 1
 
-#define PATHPATH "Resources/paths"
+#define PATHPATH "Resources/paths/barrier"
 #define NPATHS 8
 
 #define REGIONPATH "Resources/regions"
@@ -28,8 +28,6 @@
 
 //define the configuration file
 #define CONFIGFILE "config.txt"
-//define the rate (in ms) to acquire data from the Coda server
-#define RUNSAMPRATE 20
 
 // */
 
@@ -42,6 +40,9 @@
 
 // Configurable constants
 
+#define CODACOUNT 28
+
+/*
 //TRACKTYPE: type of tracker being used: FOB (0) or trakStar (1)
 #define TRACKTYPE 0
 #define BIRDCOUNT 4
@@ -52,11 +53,15 @@
 #define FILTER_WIDE false
 #define FILTER_NARROW false
 #define FILTER_DC 0.0f
-
+*/
 
 //screen dimensions
-#define SCREEN_WIDTH  1920
-#define SCREEN_HEIGHT  1080
+//#define SCREEN_WIDTH  1920
+//#define SCREEN_HEIGHT  1080
+#define SCREEN_WIDTH  1440
+#define SCREEN_HEIGHT  900
+
+
 
 #if TRACKTYPE == 0
 

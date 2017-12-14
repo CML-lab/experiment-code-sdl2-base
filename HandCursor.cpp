@@ -3,7 +3,7 @@
 #include "Circle.h"
 #include "config.h"
 
-HandCursor::HandCursor(GLfloat x, GLfloat y, GLfloat diam, GLfloat clr[]) : Circle(x, y, diam, clr)
+HandCursor::HandCursor(GLfloat x, GLfloat y, GLfloat diam, GLfloat clr[], CODASYSCONFIG *CodaSysConfig) : Circle(x, y, diam, clr)
 {
 	x0 = PHYSICAL_WIDTH/2;  //initialize to the center of the screen
 	y0 = PHYSICAL_HEIGHT/2; //initialize to the center of the screen
@@ -26,6 +26,9 @@ HandCursor::HandCursor(GLfloat x, GLfloat y, GLfloat diam, GLfloat clr[]) : Circ
 		xhistScr[i] = 0;
 		yhistScr[i] = 0;
 	}
+
+	samprate = CodaSysConfig->MonitorRate;
+
 }
 
 void HandCursor::UpdatePos(GLfloat x, GLfloat y)
@@ -58,8 +61,8 @@ void HandCursor::UpdatePos(GLfloat x, GLfloat y)
 	ymean = ymean/NCHIST;
 	
 	// compute xvel as slope of data over last few 5 samples
-	xvel = (-2*xhist[4] -1*xhist[3] + 1*xhist[1] + 2*xhist[0])*SAMPRATE/10;
-	yvel = (-2*yhist[4] -1*yhist[3] + 1*yhist[1] + 2*yhist[0])*SAMPRATE/10;
+	xvel = (-2*xhist[4] -1*xhist[3] + 1*xhist[1] + 2*xhist[0])*samprate/10;
+	yvel = (-2*yhist[4] -1*yhist[3] + 1*yhist[1] + 2*yhist[0])*samprate/10;
 
 	//set the circle xpos and ypos. this is initially set as the true value, then modified as necessary
 	xpos = xTrue;

@@ -9,7 +9,7 @@
 
 using namespace std;
 
-DataWriter::DataWriter(TrackSYSCONFIG *sysconfig, const char* filename)
+DataWriter::DataWriter(CODASYSCONFIG *sysconfig, const char* filename)
 {
 
 	//record current date/time
@@ -48,10 +48,13 @@ DataWriter::DataWriter(TrackSYSCONFIG *sysconfig, const char* filename)
 		file << "Time " << ss2.str() << endl;
 		
 		//write bird config parameters of interest
-		file << "Tracker: " << (sysconfig->trackType ? "TrakStar" : "FOB") << endl;
-		file << "Number_of_Birds " << sysconfig->birdCount << endl;
-		file << "Sampling_Rate " << sysconfig->measureRate << endl;
-		file << "Report_Rate " << sysconfig->reportRate << endl;
+		//file << "Tracker: " << (sysconfig->trackType ? "TrakStar" : "FOB") << endl;
+		//file << "Number_of_Markers " << sysconfig->birdCount << endl;
+		//file << "Sampling_Rate " << sysconfig->measureRate << endl;
+		//file << "Report_Rate " << sysconfig->reportRate << endl;
+		file << "Number_of_Markers " << sysconfig->MaxMarkerInUse << endl;
+		file << "Sampling_Rate " << sysconfig->MonitorRate << endl;
+		
 
 		file << "--" << endl;
 		

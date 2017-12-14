@@ -5,7 +5,8 @@
 #include <fstream>
 #include "TargetFrame.h"
 #include "InputFrame.h"
-#include "TrackBird.h"
+//#include "TrackBird.h"
+#include "TrackCodamotion.h"
 
 // Records data
 class DataWriter
@@ -16,7 +17,8 @@ public:
 	/* filename defines a custom name to save the file as. If filename is NULL,
 	 * a name will be generated automatically.
 	 */
-	DataWriter(TrackSYSCONFIG *sysconfig, const char* filename = NULL);
+	//DataWriter(TrackSYSCONFIG *sysconfig, const char* filename = NULL);
+	DataWriter(CODASYSCONFIG *sysconfig, const char* filename = NULL);
 	DataWriter();
 	~DataWriter();
 	// Record a new line of data

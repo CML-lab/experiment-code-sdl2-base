@@ -6,6 +6,7 @@
 #include "SDL.h"
 #include "SDL_opengl.h"
 #include "Object2D.h"
+#include "TrackCodamotion.h"
 #define NCHIST 5
 
 // object to keep track of hand position/velocity and display cursor
@@ -18,6 +19,8 @@ private:
 	GLfloat yhist[NCHIST]; // y velocity history
 	GLfloat xhistScr[NCHIST]; // x screen position history 
 	GLfloat yhistScr[NCHIST]; // y screen position history
+
+	GLfloat samprate;
 
 	GLfloat x0;  //this is the defined origin for any rotations or gain changes of the cursor
 	GLfloat y0;
@@ -36,7 +39,7 @@ private:
 
 public:
 	//constructor function call: inherit from Circle
-	HandCursor(GLfloat x, GLfloat y, GLfloat diam, GLfloat clr[]);
+	HandCursor(GLfloat x, GLfloat y, GLfloat diam, GLfloat clr[], CODASYSCONFIG *CodaSysConfig);
 
 	// destructor
 	~HandCursor(){}

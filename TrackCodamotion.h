@@ -29,6 +29,8 @@
 #include <memory.h>
 #include <time.h>
 #include <windows.h>
+#include <math.h>
+#include <map>
 #include "InputFrame.h"
 #include "config.h"
 #include "Timer.h"
@@ -69,7 +71,8 @@ struct CODASYSCONFIG
 	int MaxMarkers;
 	WORD MaxMarkerInUse;
 
-	float AcqRate;
+	int MonitorRate;  //effective sampling rate during the task
+	float AcqRate;		//true data samplng rate in the final saved dataset
     DWORD MaxSamples;
     float AcqTimeMax;
 
@@ -96,15 +99,12 @@ class TrackCoda
 {
 private:
 	
-	static CODASYSCONFIG CodaSysConfig;  
-
 public:
-	TrackCoda();
 	~TrackCoda() { };
 	
-	static int InitializeCoda();  // initialize the system; return 0 for failed attempt, otherwise 1 for FOB or 2 for trakSTAR
-	static int GetUpdatedSample(TrackDATAFRAME DataBirdFrame[]);  // poll for a new sample for a given sensor.  return number of new samples available, or 0 if no update was made
-	static int ShutDownCoda();    // shut down the system; return false for failed attempt, otherwise true
+	static int InitializeCoda(CODASYSCONFIG *CodaSysConfig);  // initialize the system; return 0 for failed attempt, otherwise 1 for FOB or 2 for trakSTAR
+	static int GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME DataBirdFrame[]);  // poll for a new sample for a given sensor.  return number of new samples available, or 0 if no update was made
+	static int ShutDownCoda(CODASYSCONFIG *CodaSysConfig);    // shut down the system; return false for failed attempt, otherwise true
 
 	static void print_alignment_status(const DWORD* marker_id_array,  const codaRTNet::DeviceInfoAlignment& info);
 	static void print_devicestatusarray_errors(const codaRTNet::DeviceStatusArray& array);

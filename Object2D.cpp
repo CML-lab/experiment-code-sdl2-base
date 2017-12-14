@@ -1,10 +1,11 @@
 #include <cmath>
 #include "Object2D.h"
 
-Object2D::Object2D(Image* i)
+Object2D::Object2D(Image* i,CODASYSCONFIG *CodaSysConfig)
 {
 	image = i;
 	angle = 0.0f;
+	samprate = CodaSysConfig->MonitorRate;
 }
 
 GLfloat Object2D::GetWidth() const
@@ -64,8 +65,8 @@ void Object2D::SetPos(GLfloat x, GLfloat y)
 	ymean = ymean/NO2DHIST;
 	
 	// compute xvel as slope of data over last few 5 samples
-	xvel = (-2*xhist[4] -1*xhist[3] + 1*xhist[1] + 2*xhist[0])*SAMPRATE/10;
-	yvel = (-2*yhist[4] -1*yhist[3] + 1*yhist[1] + 2*yhist[0])*SAMPRATE/10;
+	xvel = (-2*xhist[4] -1*xhist[3] + 1*xhist[1] + 2*xhist[0])*samprate/10;
+	yvel = (-2*yhist[4] -1*yhist[3] + 1*yhist[1] + 2*yhist[0])*samprate/10;
 
 }
 
