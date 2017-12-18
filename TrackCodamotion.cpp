@@ -6,6 +6,7 @@
 int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
 {
 	std::cerr << std::endl << "Starting CODA Initialization..." << std::endl;
+	std::cout << std::endl << "Starting CODA Initialization..." << std::endl;
 
 	int ch;
 	
@@ -73,6 +74,8 @@ int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
 	// connect to selected server
 	CodaSysConfig->cl.connect(CodaSysConfig->discover.server[iServer].ip, CodaSysConfig->discover.server[iServer].port);
 	
+	std::cout << "   Connected to server." << std::endl;
+
 	// get hardware config list
 	codaRTNet::HWConfigEnum configs;
 	CodaSysConfig->cl.enumerateHWConfig(configs);
@@ -134,6 +137,8 @@ int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
 		fwprintf(stderr, L" USING: %s\n", configs.config[CodaSysConfig->configchoice].strName);
 	}
 
+	std::cout << "   Hardware configuration selected." << std::endl;
+
 	// get enabled devices for selected hardware config
 	CODANET_HWCONFIG_DEVICEENABLE devices;
 	CodaSysConfig->cl.getDeviceEnable(configs.config[CodaSysConfig->configchoice].dwAddressHandle, devices);
@@ -181,6 +186,7 @@ int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
 	if (doalign == 'y' || doalign == 'Y')
 	{
 		std::cerr << "Coda Marker Alignment requested." << std::endl;
+		std::cout << "   Coda Marker Alignment..." ;
 
 		// alignment request structure
 		codaRTNet::DeviceOptionsAlignment align(alignmarkers[0], alignmarkers[0], alignmarkers[1], alignmarkers[0], alignmarkers[2]);
@@ -213,7 +219,15 @@ int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
 			//std::cerr << "Alignment failed. Shutting down Coda system..." << std::endl;
 			//CodaSysConfig->cl.stopSystem();
 			//return(5);
+
+			std::cout << " failed." << std::endl;
 		}
+		else
+		{
+			std::cout << " completed." << std::endl;
+		}
+
+
 
 	}
 
@@ -395,6 +409,8 @@ int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
 	*/
 
 
+	std::cout << "   Starting acquisition... " << std::endl;
+
 	//*** Start Acquisition ***
 
     // prepare for acquisition (includes cx1 sensor offset; takes ~500ms)
@@ -418,12 +434,14 @@ int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
     CodaSysConfig->SampleTime = 0.0F;
 
 	CodaSysConfig->GetSampleTimer = new Timer();
-	CodaSysConfig->GetSampleTimer->SetAlarmTime(CodaSysConfig->MonitorPeriod,1);
+	CodaSysConfig->GetSampleTimer->SetAlarmTime(Uint32(CodaSysConfig->MonitorPeriod/1000),1);
 	CodaSysConfig->GetSampleTimer->Reset();
     memset(CodaSysConfig->SyncStopSampleNum, 0, sizeof(DWORD));
 
 	//close configuration file
 	cfile.close();
+
+	std::cout << "Coda Initialization complete." << std::endl;
 
 	return(0); //successful initialization; returns 0
 }
@@ -440,11 +458,12 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
     // list of sample numbers where ext.sync stopped:
     int iSyncStop = 0;
 
-	if(CodaSysConfig->GetSampleTimer->CheckAlarm())
+	if(CodaSysConfig->GetSampleTimer->Elapsed() > CodaSysConfig->MonitorPeriod/1000) //(CodaSysConfig->GetSampleTimer->CheckAlarm())
 	{
 		//if the timer has stopped, a new sample should be available; we can then proceed to access it
 		CodaSysConfig->GetSampleTimer->Reset(); //reset the timer
 
+		//std::cerr << "get sample..." << std::endl;
 
 		// request latest frame (packet) from all devices
 		try
@@ -527,7 +546,7 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
 
 							// find number of marker positions available
 							DWORD NumMarkers = decode3D.getNumMarkers();
-							NumMarkers = (NumMarkers <= CODACOUNT ? NumMarkers : CODACOUNT);  //restrict this to be no longer than 56
+							NumMarkers = (NumMarkers <= CodaSysConfig->MaxMarkers ? NumMarkers : CodaSysConfig->MaxMarkers);  //restrict this to be no longer than 56
 							//BYTE  valid[56]; //max possible Markers is 56
 							char  strInView[65] = "123456789 0123456789 0123456789 0123456789 0123456789 0123456";
 							int i = 0;
@@ -560,10 +579,12 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
 								//	strInView[i] = '-';
 
 								// save marker data into data structure
-								float* pos = decode3D.getPosition(imarker);
-								DataCodaFrame[imarker+1].x = pos[0];
-								DataCodaFrame[imarker+1].y = pos[1];
-								DataCodaFrame[imarker+1].z = pos[2];
+								float* pos = decode3D.getPosition(imarker);  //gets data in mm
+								DataCodaFrame[imarker+1].x = pos[0]/1000.0f;
+								DataCodaFrame[imarker+1].y = pos[1]/1000.0f;
+								DataCodaFrame[imarker+1].z = pos[2]/1000.0f;
+
+								//std::cerr << "processed data packet..." << std::endl;
 
 							}
 							// terminate strInView:
@@ -592,7 +613,7 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
 			if(!CodaSysConfig->cl.isAcqInProgress())
 			{
 				CodaSysConfig->timeStop = clock();
-				return(-1); //we have exceeded the maximum recording time; data is no longer available!
+				return(0); //we have exceeded the maximum recording time; data is no longer available!
 			}
 			// if cx1 is still acquiring in ext. sync mode, then timeout is because no sync has been received:
 			//!!What if there is another device, such as ADC?
@@ -606,7 +627,7 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
 	}
 
 	else
-		//a new sample is not yet available; return null
+		//a new sample is not yet available; return true
 		return(0);
 
 
@@ -624,8 +645,8 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig,tm* ltm)
 
 
     float ElapsedTime = (float)(CodaSysConfig->timeStop - CodaSysConfig->timeStart)/CLOCKS_PER_SEC;
-    std::cerr << "End of CODA acquisition: " << ElapsedTime << "s." << std::endl;
-    
+    std::cerr << "End of CODA acquisition: " << ElapsedTime << "s." << std::endl;    
+
 	/*
 	// close the monitor-data datafile:
     if(CodaSysConfig->monitorfile)
@@ -634,6 +655,8 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig,tm* ltm)
       fclose(CodaSysConfig->monitorfile);
     }
 	*/
+
+	std::cout << "Transfering data..." ;
 
     // Download data buffers: -------------------------------------------------------------------
     DWORD NumSamplesCX1 = CodaSysConfig->cl.getAcqBufferNumPackets(DEVICEID_CX1);
@@ -760,7 +783,7 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig,tm* ltm)
 							valid[marker] = (decode3D.getValid(marker))? 1:0;
 						    BYTE* intensity = decode3D.getIntensity(marker);
 							// write data to file:
-							fprintf(fp, "\t%u\t%0.5f\t%0.5f\t%0.5f", valid[marker], pos[0], pos[1], pos[2]);
+							fprintf(fp, "\t%u\t%0.5f\t%0.5f\t%0.5f", valid[marker], pos[0]/1000.0f, pos[1]/1000.0f, pos[2]/1000.0f);
 					    }
 						// datfile newline:
 						fprintf(fp, "\n");
@@ -784,7 +807,7 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig,tm* ltm)
     // close datafile:
     fclose(fp);
 
-
+	std::cout << "complete." << std::endl << "Shutting down CODA system." << std::endl;
 	
 	// shutdown system before exiting:
 	CodaSysConfig->cl.stopSystem();

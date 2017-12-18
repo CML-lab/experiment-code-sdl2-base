@@ -60,7 +60,7 @@ SDL_Event event;
 SDL_Window *screen = NULL;
 SDL_GLContext glcontext = NULL;
 
-HandCursor* curs[CODACOUNT + 1];
+HandCursor* curs[MAXCODACOUNT + 1];
 HandCursor* player = NULL;
 Circle* startCircle = NULL;
 Circle* targCircle = NULL;
@@ -98,7 +98,7 @@ bool sensorsActive;
 int trackstatus;
 //TrackSYSCONFIG sysconfig;
 CODASYSCONFIG sysconfig;
-TrackDATAFRAME dataframe[CODACOUNT+1];
+TrackDATAFRAME dataframe[MAXCODACOUNT+1];
 Uint32 DataStartTime = 0;
 
 //variables to compute the earned score
@@ -245,10 +245,14 @@ int main(int argc, char* args[])
 				Target.PSstatus = -99;
 
 			//updatedisplay = true;
-			for (int a = ((trackstatus>0) ? 1 : 0); a <= ((trackstatus>0) ? CODACOUNT : 0); a++)
+			for (int a = ((trackstatus==0) ? 1 : 0); a <= ((trackstatus==0) ? sysconfig.MaxMarkerInUse : 0); a++)
 			{
+				//std::cerr << " Marker " << a;
+
 				if (dataframe[a].ValidInput)
 				{
+					//std::cerr << " valid data.";
+
 					if (a == HAND)
 					{
 						curs[0]->UpdatePos(dataframe[a].x,dataframe[a].y);
@@ -259,6 +263,7 @@ int main(int argc, char* args[])
 
 					writer->Record(a, dataframe[a], Target);
 				}
+				std::cerr << std::endl;
 
 				//if this marker will be used to drive the cursor, set the cursor position using it
 
