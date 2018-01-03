@@ -59,6 +59,8 @@ struct CODASYSCONFIG
 	DWORD configchoice;
 	BOOL bExtSync;
 
+	int ncameras;
+
 	//device ID flags
 	bool bGS16AIOenabled;
 	bool bNI6221enabled;

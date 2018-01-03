@@ -23,6 +23,8 @@ struct TrackDATAFRAME
 
 	float vel;
 
+	//DWORD samptime;	//for codamotion, elapsed time that the sample was acquired
+	DWORD sampnum;		//for codamotion, the sample number
 	BYTE CodaNumCameras;
 	float CodaIntensity; //average intensity across all the cameras
 

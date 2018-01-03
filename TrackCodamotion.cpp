@@ -122,11 +122,14 @@ int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
 
 	CodaSysConfig->configchoice = 100;
 
-	for (int iconfig = 0; iconfig <= 9; iconfig++)
-		if(~cfname.compare(configs.config[iconfig].strName)) //zero means they are equal
+	for (int iconfig = 0; iconfig < configs.dwNumConfig; iconfig++)
+	{
+		std::wcerr << " Config: " << configs.config[iconfig].strName << " : " << cfname.compare(configs.config[iconfig].strName) << std::endl;
+		if(cfname.compare(configs.config[iconfig].strName)==0) //zero means they are equal
 			CodaSysConfig->configchoice = DWORD(iconfig);
+	}
 
-	if(CodaSysConfig->configchoice < 0 || CodaSysConfig->configchoice > 9)
+	if(CodaSysConfig->configchoice < 0 || CodaSysConfig->configchoice > configs.dwNumConfig)
 	{
 		std::cerr << "Unrecognized or Invalid Hardware Configuration specified in config file!" << std::endl;
 		return(4);
@@ -253,11 +256,11 @@ int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
 	CodaSysConfig->MonitorPeriod = floor(1000.0f/float(CodaSysConfig->MonitorRate)); //ms
 	std::cerr << "Monitor Rate/Period: " << CodaSysConfig->MonitorRate << " (" << CodaSysConfig->MonitorPeriod << ")" << std::endl;
 
+
     // create data stream (if not attempting a restart)
     // New to V1.7: New RTNet SDK function has new parameter to increase UDP buffer size, 
     // so can download more samples (packets) from acquisition buffers with one request.
 	CodaSysConfig->cl.createDataStreamBuffer(CodaSysConfig->stream, 7000, CodaSysConfig->UDPbufferSize); //createDataStreamBuffer(DataStream& stream, ::WORD port, int bufferSize)
-
 
 
 	//*** Specify whether to use External sync ***
@@ -373,7 +376,6 @@ int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
     // (should be same as AcqRate)
     CodaSysConfig->cx1TickTime = CodaSysConfig->cl.getDeviceTickSeconds(DEVICEID_CX1);
 
-    
     // request acquisition time limit:
     CodaSysConfig->MaxSamples = CODANET_ACQ_UNLIMITED;
     CodaSysConfig->AcqTimeMax = 0.0F;
@@ -393,6 +395,9 @@ int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
 	std::cerr << "Max acquisition time (s): " << CodaSysConfig->AcqTimeMax << std::endl;
 
 
+	//set packet mode
+	//codaRTNet::DeviceOptionsCodaPacketMode
+
 
 	//*** Set up a file to record monitored data ***
 	/*
@@ -407,6 +412,9 @@ int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
                             CodaSysConfig->AcqTimeMax, CodaSysConfig->cx1mode, CodaSysConfig->cx1decim, CodaSysConfig->AcqRate, CodaSysConfig->MonitorPeriod);
     }
 	*/
+
+	//initialize the number of CX1 cameras to be 1; we will correct this later in the data acquisition phase
+	CodaSysConfig->ncameras = 1;
 
 
 	std::cout << "   Starting acquisition... " << std::endl;
@@ -454,6 +462,8 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
     // acquisition counters & timers:
     //CodaSysConfig->timeStart = clock();
     //CodaSysConfig->timeStop = 0;
+
+	bool SampleUpdated = false;
 
     // list of sample numbers where ext.sync stopped:
     int iSyncStop = 0;
@@ -532,9 +542,18 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
 							fprintf(stderr, "Waiting for Ext.Sync...\r");  //use \r to prevent scrolling this message 
 							// add to list of sync-stop sample numbers, for indication in buffer download data:
 							CodaSysConfig->SyncStopSampleNum[iSyncStop] = CodaSysConfig->SampleNum;
+							SampleUpdated = false;
+						}
+						//if SampleNum hasn't changed, don't reprint the same data sample
+						else if ((CodaSysConfig->MonitorSample > 1) && (CodaSysConfig->SampleNum == CodaSysConfig->PrevSampleNum))
+						{
+							CodaSysConfig->SyncStopSampleNum[iSyncStop] = CodaSysConfig->SampleNum;
+							SampleUpdated = false;
 						}
 						else
 						{
+							SampleUpdated = true;
+
 							// increment iSyncStop counter if last SampleNum was recorded:
 							if(CodaSysConfig->SyncStopSampleNum[iSyncStop] != 0 && iSyncStop < 999)
 								iSyncStop++;
@@ -542,7 +561,7 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
 							// remember this (new) sample number:
 							CodaSysConfig->PrevSampleNum = CodaSysConfig->SampleNum;
 
-							CodaSysConfig->SampleTime = CodaSysConfig->SampleNum * CodaSysConfig->cx1TickTime;
+							CodaSysConfig->SampleTime = float(CodaSysConfig->SampleNum) * CodaSysConfig->cx1TickTime;
 
 							// find number of marker positions available
 							DWORD NumMarkers = decode3D.getNumMarkers();
@@ -563,10 +582,15 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
 							{
 								//DataCodaFrame[0] is the mouse, so we have to skip over it.
 								DataCodaFrame[imarker+1].ValidInput = (decode3D.getValid(imarker))? 1:0;
-								DataCodaFrame[imarker+1].time = CodaSysConfig->SampleNum;
+								DataCodaFrame[imarker+1].sampnum = CodaSysConfig->SampleNum;
+								DataCodaFrame[imarker+1].time = CodaSysConfig->SampleTime;
 								
 								//calculate average 
 								DataCodaFrame[imarker+1].CodaNumCameras = decode3D.getNumCamerasPerMarker();
+
+								if (int(DataCodaFrame[imarker+1].CodaNumCameras) > CodaSysConfig->ncameras)
+									CodaSysConfig->ncameras = int(DataCodaFrame[imarker+1].CodaNumCameras);
+
 								BYTE *intensity = decode3D.getIntensity(imarker);
 								for(int icamera = 0; icamera < DataCodaFrame[imarker+1].CodaNumCameras; icamera++)
 									DataCodaFrame[imarker+1].CodaIntensity = DataCodaFrame[imarker+1].CodaIntensity + intensity[icamera];
@@ -580,8 +604,8 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
 
 								// save marker data into data structure
 								float* pos = decode3D.getPosition(imarker);  //gets data in mm
-								DataCodaFrame[imarker+1].x = pos[0]/1000.0f;
-								DataCodaFrame[imarker+1].y = pos[1]/1000.0f;
+								DataCodaFrame[imarker+1].x = pos[0]/1000.0f + CALxOFFSET;
+								DataCodaFrame[imarker+1].y = pos[1]/1000.0f + CALyOFFSET;
 								DataCodaFrame[imarker+1].z = pos[2]/1000.0f;
 
 								//std::cerr << "processed data packet..." << std::endl;
@@ -623,7 +647,10 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
 			}
 		}
 
-		return(1); //most recent data sample has been successfully received and parsed
+		if (SampleUpdated)
+			return(1); //most recent data sample has been successfully received and parsed
+		else
+			return(0); //successful check for data but no new samples are available
 	}
 
 	else
@@ -697,19 +724,21 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig,tm* ltm)
 		fprintf(fp, "Codamotion Marker data\n");
 		fprintf(fp, "NumMarkers:\t%d\n", CodaSysConfig->MaxMarkerInUse);
 		fprintf(fp, "NumSamples:\t%d\n", NumSamplesCX1);
-		fprintf(fp, "AcqMode (Hz):\t%u\n", CodaSysConfig->cx1mode);
-		fprintf(fp, "AcqTime (s):\t%0.3f\n", CodaSysConfig->AcqTimeMax);
+		fprintf(fp, "AcqMode_Hz:\t%u\n", CodaSysConfig->cx1mode);
+		fprintf(fp, "AcqTime_s:\t%0.3f\n", CodaSysConfig->AcqTimeMax);
 		if(CodaSysConfig->bExtSync)
-		  fprintf(fp, "External Sync:\t1\n");
+		  fprintf(fp, "External_Sync:\t1\n");
 		else
-		  fprintf(fp, "AcqRate (Hz):\t%0.3f\n", CodaSysConfig->AcqRate);
+		  fprintf(fp, "AcqRate_Hz:\t%0.3f\n", CodaSysConfig->AcqRate);
 		fprintf(fp, "NumSamplesADC:\t%d\n", NumSamplesADC);
+		fprintf(fp, "--\n");  //print END OF HEADER indicator
 
 		// column headers:
 		fprintf(fp, "Sample\tTime");
 		for(int m = 0; m < CodaSysConfig->MaxMarkerInUse; m++)
-		  fprintf(fp, "\tM%d\tX\tY\tZ", m+1);  //Marker ID is 1-based in datafile
+		  fprintf(fp, "\tM%dValid\tM%dX\tM%dY\tM%dZ", m+1, m+1, m+1, m+1);  //Marker ID is 1-based in datafile
 		fprintf(fp, "\n");
+		fprintf(fp, "-----\n");  //print START OF DATA FILE indicator
 	}
     DWORD iStop = 0;
 
@@ -719,7 +748,13 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig,tm* ltm)
     //-- request all samples:
     //-- CX1 packets have DataSize=452 and trasmitsize=468 bytes if not acquiring multi-coda data
     // add 1 for safety, if UDP buffer is N * n
-    DWORD NumSamplesPerRequest = CodaSysConfig->UDPbufferSize / 469;  //!!Need to change this if multi-coda data is acquired: packets will be larger
+
+	//*********************************************************************************
+	//********HOW DO YOU FIGURE OUT THE BUFFER AND PACKET SIZES???**********  (losing packets in the raw data file)
+	//*********************************************************************************
+
+	//DWORD NumSamplesPerRequest = CodaSysConfig->UDPbufferSize / (469);  //!!Need to change this if multi-coda data is acquired: packets will be larger
+    DWORD NumSamplesPerRequest = CodaSysConfig->UDPbufferSize / (468*CodaSysConfig->ncameras + 1);  //!!Need to change this to properly adjust for number of cameras; this is just a crude approximation for now
     DWORD sample = 0;
 
     while(sample < NumSamplesCX1)
@@ -783,7 +818,7 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig,tm* ltm)
 							valid[marker] = (decode3D.getValid(marker))? 1:0;
 						    BYTE* intensity = decode3D.getIntensity(marker);
 							// write data to file:
-							fprintf(fp, "\t%u\t%0.5f\t%0.5f\t%0.5f", valid[marker], pos[0]/1000.0f, pos[1]/1000.0f, pos[2]/1000.0f);
+							fprintf(fp, "\t%u\t%0.5f\t%0.5f\t%0.5f", valid[marker], pos[0]/1000.0f+CALxOFFSET, pos[1]/1000.0f+CALyOFFSET, pos[2]/1000.0f);
 					    }
 						// datfile newline:
 						fprintf(fp, "\n");
