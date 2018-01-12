@@ -396,7 +396,10 @@ int TrackCoda::InitializeCoda(CODASYSCONFIG *CodaSysConfig)
 
 
 	//set packet mode
-	//codaRTNet::DeviceOptionsCodaPacketMode
+	codaRTNet::DeviceOptionsCodaPacketMode codaPacketMode1(CODANET_CODAPACKETMODE_COMBINED_COORD);
+	CodaSysConfig->cl.setDeviceOptions(codaPacketMode1);
+	CodaSysConfig->PacketSize = 0;
+	CodaSysConfig->PacketTransmitSize = 0;
 
 
 	//*** Set up a file to record monitored data ***
@@ -520,6 +523,15 @@ int TrackCoda::GetUpdatedSample(CODASYSCONFIG *CodaSysConfig, TrackDATAFRAME Dat
 			}
 			else
 			{ 
+				// keep track of the max packet size accessed; this will be used later
+				DWORD psize = packet.getDataSize();
+				DWORD tsize = packet.transmitSize();
+				if (CodaSysConfig->PacketSize < psize)
+					CodaSysConfig->PacketSize = psize;
+				if (CodaSysConfig->PacketTransmitSize < tsize)
+					CodaSysConfig->PacketTransmitSize = tsize;
+				//std::cerr << "packet.DataSize: " << psize << " packet.transmitSize: " << tsize << std::endl;
+
 				// check result
 				if(packet.verifyCheckSum())
 				{
@@ -691,7 +703,7 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig,tm* ltm)
     if(CodaSysConfig->bGS16AIOenabled)
 		NumSamplesADC = CodaSysConfig->cl.getAcqBufferNumPackets(DEVICEID_GS16AIO);
 
-    std::cerr << "Downloading " << NumSamplesCX1 << " samples from acq.buffer: ";
+    std::cerr << "Downloading " << NumSamplesCX1 << " samples from acq.buffer";
 
     // create datafile name:
     char datafile[200] = "";
@@ -749,12 +761,9 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig,tm* ltm)
     //-- CX1 packets have DataSize=452 and trasmitsize=468 bytes if not acquiring multi-coda data
     // add 1 for safety, if UDP buffer is N * n
 
-	//*********************************************************************************
-	//********HOW DO YOU FIGURE OUT THE BUFFER AND PACKET SIZES???**********  (losing packets in the raw data file)
-	//*********************************************************************************
-
 	//DWORD NumSamplesPerRequest = CodaSysConfig->UDPbufferSize / (469);  //!!Need to change this if multi-coda data is acquired: packets will be larger
-    DWORD NumSamplesPerRequest = CodaSysConfig->UDPbufferSize / (468*CodaSysConfig->ncameras + 1);  //!!Need to change this to properly adjust for number of cameras; this is just a crude approximation for now
+	DWORD NumSamplesPerRequest = CodaSysConfig->UDPbufferSize / (CodaSysConfig->PacketTransmitSize + 1); 
+	std::cerr << std::endl << "Coda Max Transmit Packet Size: " << CodaSysConfig->PacketTransmitSize << std::endl;
     DWORD sample = 0;
 
     while(sample < NumSamplesCX1)
@@ -794,7 +803,8 @@ int TrackCoda::ShutDownCoda(CODASYSCONFIG *CodaSysConfig,tm* ltm)
 				    {
 						// get the sample number:
 						CodaSysConfig->SampleNum = decode3D.getTick();
-						CodaSysConfig->SampleTime = CodaSysConfig->SampleNum * CodaSysConfig->cx1TickTime;
+						//CodaSysConfig->SampleTime = CodaSysConfig->SampleNum * CodaSysConfig->cx1TickTime;
+						CodaSysConfig->SampleTime = float(CodaSysConfig->SampleNum) * CodaSysConfig->cx1TickTime;
 
 						// insert a blank line if external sync paused at this sampleNum:
 						if(CodaSysConfig->bExtSync && (iStop < 1000) && (CodaSysConfig->SyncStopSampleNum[iStop] == CodaSysConfig->SampleNum))

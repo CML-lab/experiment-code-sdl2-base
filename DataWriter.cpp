@@ -33,7 +33,7 @@ DataWriter::DataWriter(CODASYSCONFIG *sysconfig, tm* ltm, const char* filename)
 	else
 	{
 		//append timestamp to prevent overwrites
-		ss3 << filename << "_" << ss1.str() << ss2.str() << ".dat";
+		ss3 << filename << "_" << ss1.str() << ss2.str() << "E" << ".dat";
 		file.open(ss3.str(), ios::out);
 	}
 
@@ -57,6 +57,7 @@ DataWriter::DataWriter(CODASYSCONFIG *sysconfig, tm* ltm, const char* filename)
 		file << "--" << endl;
 		
 		file << "Device_Num "
+			 << "SampleNum "
 			 << "TrackerTime "
 			 << "Trial "
 			 << "HandX "
@@ -66,11 +67,8 @@ DataWriter::DataWriter(CODASYSCONFIG *sysconfig, tm* ltm, const char* filename)
 			 << "StartY "
 		     << "TargetX "
 			 << "TargetY "
-		     << "TargetX2 "
-			 << "TargetY2 "
+			 << "Trace "
 			 << "TrType "
-			 << "VelMin "
-			 << "VelMax "
 			 << "TrialScore "
 			 << endl;
 
@@ -90,6 +88,7 @@ void DataWriter::Record(int deviceNo, TrackDATAFRAME frame, TargetFrame Target)
 	if (file.is_open())
 	{
 		file << deviceNo << " "
+			<< frame.sampnum << " "
 			<< std::fixed << showpoint << std::setprecision(5) 
 			<< frame.time << " "
 			<< std::resetiosflags( std::ios::fixed | std::ios::showpoint )
@@ -101,11 +100,8 @@ void DataWriter::Record(int deviceNo, TrackDATAFRAME frame, TargetFrame Target)
 			<< Target.starty << " "
 			<< Target.tgtx << " "
 			<< Target.tgty << " "
-			<< Target.tgtx2 << " "
-			<< Target.tgty2 << " "
+			<< Target.trace << " "
 			<< Target.TrType << " "
-			<< Target.velmin << " "
-			<< Target.velmax << " "
 			<< Target.score << " "
 			<< endl;
 	}

@@ -39,6 +39,7 @@
 #include "codaRTNetProtocolCPP/RTNetClient.h"
 #include "codaRTNetProtocolCPP/DeviceOptionsAlignment.h"
 #include "codaRTNetProtocolCPP/DeviceOptionsCodaMode.h"
+#include "codaRTNetProtocolCPP/DeviceOptionsCodaPacketMode.h"
 #include "codaRTNetProtocolCPP/DeviceInfoAlignment.h"
 #include "codaRTNetProtocolCPP/DeviceInfoUnitCoordSystem.h"
 #include "codaRTNetProtocolCPP/PacketDecode3DResult.h"
@@ -77,6 +78,8 @@ struct CODASYSCONFIG
 	float AcqRate;		//true data samplng rate in the final saved dataset
     DWORD MaxSamples;
     float AcqTimeMax;
+	DWORD PacketSize;
+	DWORD PacketTransmitSize;
 
     // acquisition counters & timers:
 	int MonitorSample;
