@@ -22,6 +22,7 @@
 #include "SpeedBar.h"
 #include "Timer.h"
 #include "Image.h"
+#include "vlcVideoPlayer.h"
 
 #include "config.h"
 
@@ -77,6 +78,8 @@ GameState state;
 Timer* trialTimer;
 Timer* hoverTimer;
 Timer* movTimer;
+
+Video *Vid;
 
 //Uint32 gameTimer;
 //Uint32 hoverTimer;
@@ -344,9 +347,14 @@ bool init()
 		std::cerr << "SDL initialized." << std::endl;
 
 
-	screen = SDL_CreateWindow("Code Base SDL2",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | (WINDOWED ? 0 : SDL_WINDOW_FULLSCREEN)); //SCREEN_BPP,
-	//note, this call is missing the request to set to 32 bpp. unclear if this is going to be a problem
-
+	screen = SDL_CreateWindow("Code Base SDL2",
+		//SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,
+		(WINDOWED ? SDL_WINDOWPOS_UNDEFINED : SDL_WINDOWPOS_CENTERED),(WINDOWED ? SDL_WINDOWPOS_UNDEFINED : SDL_WINDOWPOS_CENTERED),
+		SCREEN_WIDTH, SCREEN_HEIGHT, 
+		SDL_WINDOW_OPENGL | (WINDOWED ? 0 : (SDL_WINDOW_MAXIMIZED | SDL_WINDOW_ALWAYS_ON_TOP) ) ); //SCREEN_BPP, //
+	//note, the fullscreen option doesn't play nicely with the video window, so we will make a "fake" fullscreen which is simply a maximized window. 
+	//Also, "borderless" doesn't play nicely either so we can't use that option, we just have to make the window large enough that the border falls outside the window.
+	//To get full screen (overlaying the taskbar), we need to set the taskbar to auto-hide so that it stays offscreen. Otherwise it has priority and will be shown on top of the window.
 	if (screen == NULL)
 	{
 		std::cerr << "Screen failed to build." << std::endl;
@@ -354,9 +362,21 @@ bool init()
 	}
 	else
 	{
+		//SDL_SetWindowBordered(screen, SDL_FALSE);
+		SDL_Rect usable_bounds;
+		int display_index = SDL_GetWindowDisplayIndex(screen);
+		if (0 != SDL_GetDisplayUsableBounds(display_index, &usable_bounds)) 
+			std::cerr << "SDL error getting usable screen bounds." << std::endl;
+		
+		SDL_SetWindowPosition(screen, usable_bounds.x, usable_bounds.y);
+		SDL_SetWindowSize(screen, usable_bounds.w, usable_bounds.h);
+		SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
+
+		//create OpenGL context
 		glcontext = SDL_GL_CreateContext(screen);
 		std::cerr << "Screen built." << std::endl;
 	}
+
 
 	SDL_GL_SetSwapInterval(0); //ask for immediate updates rather than syncing to vertical retrace
 
@@ -427,6 +447,15 @@ bool init()
 		else
 			std::cerr << "   Region " << a << " loaded." << std::endl;
 	}
+
+
+
+	//initialize the video player and the video file
+	std::stringstream vidfile;
+	vidfile << "Video0.divx";
+	Vid = new Video(vidfile.str().c_str(),SCREEN_WIDTH/2,SCREEN_HEIGHT/4,VIDEO_WIDTH,VIDEO_HEIGHT);
+
+
 
 	//initialize the speed bar object
 	//velBar.MakeSpeedBar(PHYSICAL_WIDTH/2, PHYSICAL_HEIGHT*3/4, 0.2, 0.02, 0.0, 2.0, 0.5, 1.5,'h');
@@ -619,6 +648,9 @@ void clean_up()
 	delete trialnum;
 
 	delete writer;
+
+	Vid->CleanUp();
+    delete Vid;
 
 	SDL_GL_DeleteContext(glcontext);
 	SDL_DestroyWindow(screen);
@@ -828,6 +860,10 @@ void game_update()
 				targCircle->On();
 				photosensorCircle->Off();
 
+				int playstatus = Vid->Play();
+				std::cerr << "   Play Status... " << (!playstatus ? "playing." : "not playing.") << std::endl;
+
+
 				//turn on the requested trace
 				if (curtr.trace >= 0)
 				{
@@ -947,6 +983,9 @@ void game_update()
 
 				photosensorCircle->On();
 
+
+				Vid->Pause();
+
 				//std::cerr << "Target scored."  << std::endl;
 				std::cerr << "Score Flags: " << (reachedvelmin ? "1" : "0")
 					 	  << (reachedvelmax ? "1" : "0")
@@ -1005,6 +1044,10 @@ void game_update()
 				trialnum = Image::ImageText(trialnum,texttn.str().c_str(),"arial.ttf", 12,textColor);
 				std::cerr << "Trial " << CurTrial << " ended at " << SDL_GetTicks() << std::endl;
 
+				if (CurTrial > 1)
+					Vid->ResetVid();
+
+
 				//if we have reached the end of the trial table, quit
 				if (CurTrial >= NTRIALS)
 				{
@@ -1028,6 +1071,8 @@ void game_update()
 
 			startCircle->Off();
 			targCircle->Off();
+
+			Vid->Stop();
 
 			velBar.Off();
 

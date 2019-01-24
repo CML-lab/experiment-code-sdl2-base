@@ -1,7 +1,10 @@
 Debug/*
 !Debug/*.dll
+!Debug/plugins/*
 ipch/
 Release/
+Resources/videos/*
+!Resources/videos/Video0.divx
 main_*
 Data/
 *.dat

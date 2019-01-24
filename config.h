@@ -25,6 +25,9 @@
 #define REGIONPATH "Resources/regions"
 #define NREGIONS 1
 
+#define VIDEOPATH "C:\\Users\\Coda\\Documents\\cpp code\\experiment-code-sdl2-base\\Resources\\videos\\"
+#define VIDEO_WIDTH 640
+#define VIDEO_HEIGHT 480
 // */
 
 
@@ -49,8 +52,8 @@
 
 
 //screen dimensions
-#define SCREEN_WIDTH  1920
-#define SCREEN_HEIGHT  1080
+#define SCREEN_WIDTH  1440
+#define SCREEN_HEIGHT  900
 
 #if TRACKTYPE == 0
 
