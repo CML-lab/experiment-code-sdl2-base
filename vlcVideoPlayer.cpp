@@ -161,9 +161,19 @@ Video::Video(const char* fname, int x, int y, int w, int h) //SDL_Renderer *rend
     }
 
 	//set up the video file to be played
+	//libVLC wants an absolute path, so we will figure out the project directory
+	char *bpath = SDL_GetBasePath();
+	std::string basepath;
+	basepath.assign(bpath);
+	//std::cerr << "BasePath: " << basepath.c_str() << std::endl;
+	basepath.erase(basepath.rfind("\\"),1); //get rid of the last slash in the path
+	basepath.erase(basepath.rfind("\\")+1,10); //get rid of the "Debug" folder name to get to the project folder
+	//std::cerr << "ModBasePath: " << basepath.c_str() << std::endl;
+
 	std::stringstream vidpath;
 	int d = 0;
-	vidpath << VIDEOPATH << fname; //"\\Video" << d << ".divx";
+	vidpath << basepath.c_str() << VIDEOPATH << fname; //"\\Video" << d << ".divx";
+	//std::cerr << "VidPath: " << vidpath.str().c_str() << std::endl;
 
 	//open the video file
 	m = libvlc_media_new_path(libvlc, vidpath.str().c_str());

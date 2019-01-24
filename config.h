@@ -25,7 +25,8 @@
 #define REGIONPATH "Resources/regions"
 #define NREGIONS 1
 
-#define VIDEOPATH "C:\\Users\\Coda\\Documents\\cpp code\\experiment-code-sdl2-base\\Resources\\videos\\"
+//#define VIDEOPATH "C:\\Users\\Coda\\Documents\\cpp code\\experiment-code-sdl2-base\\Resources\\videos\\"
+#define VIDEOPATH "Resources\\videos\\"
 #define VIDEO_WIDTH 640
 #define VIDEO_HEIGHT 480
 // */

@@ -4,6 +4,7 @@
 
 #include <SDL.h>
 #include <SDL_mutex.h>
+#include "SDL_filesystem.h"
 #include "config.h"
 #include <iostream>
 #include <sstream>
