@@ -9,6 +9,7 @@
 #include <iostream>
 #include <sstream>
 #include "vlc/vlc.h"
+#include <Shlwapi.h>
 
 
 struct ctx {
@@ -50,9 +51,11 @@ private:
 	int hasStarted;
 	int hasEnded;
 
+	int isValid;  //flag to identify that the video is actually valid!
+
 public:
 
-	Video(const char* fname, int x, int y, int w, int h);  //constructor function
+	Video(const char* fname, int x, int y, int w, int h, int* errorcode);  //constructor function
 	//int Init();
 	~Video() { };
 	
@@ -62,6 +65,7 @@ public:
 	int HasStarted();	//function to find out if video playing has started
 	int HasEnded();		//function to find out if video playing has ended or has been stopped
 	void ResetStatus();	//reset the status flags - does NOT affect the actual video status
+	void SetValidStatus(int status);
 
 	int Play();		//start playing the video
 	int Stop();		//stop playing the video

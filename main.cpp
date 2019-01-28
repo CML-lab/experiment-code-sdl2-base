@@ -452,8 +452,20 @@ bool init()
 
 	//initialize the video player and the video file
 	std::stringstream vidfile;
+	int errorcode;
 	vidfile << "Video0.divx";
-	Vid = new Video(vidfile.str().c_str(),SCREEN_WIDTH/2,SCREEN_HEIGHT/4,VIDEO_WIDTH,VIDEO_HEIGHT);
+	Vid = new Video(vidfile.str().c_str(),SCREEN_WIDTH/2,SCREEN_HEIGHT/4,VIDEO_WIDTH,VIDEO_HEIGHT,&errorcode);
+	if (errorcode != 0)
+		{
+			std::cerr << "Video did not load correctly." << std::endl;
+			Vid->SetValidStatus(0);  //this way at least the ValidFlag is valid!
+		}		
+		else
+		{
+			std::cerr << "   Video loaded." << std::endl;
+			//Vid[a]->SetValidStatus(1);  //no need to do this, the constructor should have done it already.
+			//Vid[a]->SetPos(SCREEN_WIDTH/2,SCREEN_HEIGHT/2);
+		}
 
 
 

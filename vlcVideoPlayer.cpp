@@ -89,9 +89,17 @@ void display(void *data, void *id) {
 
 
 
-Video::Video(const char* fname, int x, int y, int w, int h) //SDL_Renderer *renderer, SDL_Texture *texture, SDL_mutex *mutex, SDL_Rect rect)
+Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SDL_Renderer *renderer, SDL_Texture *texture, SDL_mutex *mutex, SDL_Rect rect)
 {
-	
+	//Note, this constructor does the "bad" thing of potentially failing, in which case it does not return a valid initialized object.
+	//We need an external way to catch when this happens. To do so, we will pass it an "errorcode" that it will write into before it exits.
+	//Then we can look at the value of the error code after calling the constructor. If the error code is 0, the constructor succeeded;
+	//otherwise, the value of the error code indicates at what stage the initialization failed.
+
+	*errorcode = 0;
+
+	isValid = 1;
+
     // If you don't have this variable set you must have plugins directory
     // with the executable or libvlc_new() will not work!
 	_putenv("VLC_PLUGIN_PATH=C:\\Users\\Coda\\Documents\\cpp code\\vlctest\\vlc-3.0.6\\plugins");
@@ -107,11 +115,17 @@ Video::Video(const char* fname, int x, int y, int w, int h) //SDL_Renderer *rend
     if (!context.window)
 	{
         std::cerr << "Couldn't create window: " << SDL_GetError() << std::endl;
+		*errorcode = 1;
+		isValid = 0;
+		//return;
 	}
 
     context.renderer = SDL_CreateRenderer(context.window, -1, 0);
     if (!context.renderer){
         std::cerr << "Couldn't create renderer: " << SDL_GetError() << std::endl;
+		*errorcode = 2;
+		isValid = 0;
+		//return;
 	}
 
 	//set the window position in absolute pixel space on the screen
@@ -125,6 +139,9 @@ Video::Video(const char* fname, int x, int y, int w, int h) //SDL_Renderer *rend
             w, h);
     if (!context.texture) {
         std::cerr << "Couldn't create texture: " << SDL_GetError() << std::endl;
+		*errorcode = 3;
+		isValid = 0;
+		//return;
     }
 
     context.mutex = SDL_CreateMutex();
@@ -156,6 +173,9 @@ Video::Video(const char* fname, int x, int y, int w, int h) //SDL_Renderer *rend
     libvlc = libvlc_new(0, NULL);
     if(libvlc == NULL) {
 		std::cerr << "LibVLC initialization failure." << std::endl;
+		*errorcode = 4;
+		isValid = 0;
+		return;
 		//exit;
         //return EXIT_FAILURE;
     }
@@ -175,14 +195,35 @@ Video::Video(const char* fname, int x, int y, int w, int h) //SDL_Renderer *rend
 	vidpath << basepath.c_str() << VIDEOPATH << fname; //"\\Video" << d << ".divx";
 	//std::cerr << "VidPath: " << vidpath.str().c_str() << std::endl;
 
+	//check if the path exists. For some reason libVLC doesn't do this check correctly so we have to do it manually!
+	if (!PathFileExistsA(vidpath.str().c_str()))
+	{
+		std::cerr << "Video file/path does not exist." << std::endl;
+		*errorcode = 5;
+		isValid = 0;
+		return;
+	}
+
 	//open the video file
 	m = libvlc_media_new_path(libvlc, vidpath.str().c_str());
 	if (m == NULL)
+	{
 		std::cerr << "Media path not valid." << std::endl;
+		*errorcode = 6;
+		isValid = 0;
+		return;
+	}
+	//else
+		//std::cerr << "Media path: " << m << std::endl;
 
     mp = libvlc_media_player_new_from_media(m);
 	if (mp == NULL)
+	{
 		std::cerr << "Media Player not created." << std::endl;
+		*errorcode = 7;
+		isValid = 0;
+		return;
+	}
 
     libvlc_media_release(m);
 
@@ -200,6 +241,8 @@ Video::Video(const char* fname, int x, int y, int w, int h) //SDL_Renderer *rend
 
 	Invisible();  //make the window invisible until we need it
 
+	std::cerr << "Video: " << vidpath.str().c_str() << " load complete: status = " << *errorcode << "." << std::endl;
+
 }
 
 void Video::SetPos(int x, int y)
@@ -210,8 +253,17 @@ void Video::SetPos(int x, int y)
 }
 
 
+void Video::SetValidStatus(int status)
+{
+	isValid = status;
+}
+
 int Video::GetStatus()
 {
+
+	if (!isValid)
+		return(-1);
+
 	//get the status of the video, and update some status flags
 	mpstate = libvlc_media_get_state(m);
 
@@ -233,6 +285,9 @@ int Video::GetStatus()
 
 int Video::HasStarted()
 {
+	if (!isValid)
+		return(-1);
+
 	GetStatus();
 
 	return(hasStarted);
@@ -240,6 +295,8 @@ int Video::HasStarted()
 
 int Video::HasEnded()
 {
+	if (!isValid)
+		return(-1);
 
 	GetStatus();
 
@@ -260,6 +317,9 @@ int Video::Play()
 
 	int status = 1;
 	
+	if (!isValid)
+		return(-1);
+
 	context.showVideo = 1;
 	Visible();
 
@@ -287,6 +347,9 @@ int Video::Stop()
 {
 	int status = 1;
 
+	if (!isValid)
+		return(-1);
+
 	context.showVideo = 0;
 	Invisible();
 
@@ -305,6 +368,9 @@ int Video::Stop()
 int Video::Pause()
 {
 
+	if (!isValid)
+		return(-1);
+
 	int status = 0;
 
 	libvlc_media_player_pause(mp);
@@ -320,9 +386,12 @@ int Video::Pause()
 
 int Video::ResetVid()
 {
+	if (!isValid)
+		return(-1);
+
 	int status = 0;
 	
-	libvlc_media_player_play(mp);
+	libvlc_media_player_play(mp);  //resetting the position only works if the video is playing...
 	libvlc_media_player_set_position(mp,0.0f);
 	libvlc_media_player_set_time(mp,0);
 	float pos = libvlc_media_player_get_position(mp);
@@ -330,6 +399,8 @@ int Video::ResetVid()
 	if (pos == 0.0f)
 		status = 1;
 	libvlc_media_player_stop(mp);
+
+	ResetStatus();
 
 	return(status);
 }
@@ -349,10 +420,13 @@ void Video::Invisible()
 
 void Video::CleanUp()
 {
-	// Stop stream and clean up libVLC.
-    libvlc_media_player_stop(mp);
-    libvlc_media_player_release(mp);
-    libvlc_release(libvlc);
+	if (isValid > 0) //only try to delete something that exists!
+	{
+		// Stop stream and clean up libVLC.
+		libvlc_media_player_stop(mp);
+		libvlc_media_player_release(mp);
+	}
+	libvlc_release(libvlc);
 
 	// Close window and clean up libSDL.
     SDL_DestroyMutex(context.mutex);
