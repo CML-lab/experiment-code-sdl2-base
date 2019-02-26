@@ -153,6 +153,7 @@ Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SD
 	context.rect.y = 0;
 	
 	//set up some libVLC initialization parameters
+	
 	char const *vlc_argv[] = {
         "--no-audio", // Don't play audio.
         "--no-xlib", // Don't use Xlib.
@@ -161,6 +162,7 @@ Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SD
         //"--sepia-intensity=200"
     };
     int vlc_argc;
+	
 
 	//initialize the special drawfunc to be null
 	drawfunc = NULL;
@@ -170,7 +172,7 @@ Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SD
 	libvlc = libvlc_new(vlc_argc, vlc_argv);
 	
 	// Initialise libVLC.
-    libvlc = libvlc_new(0, NULL);
+    //libvlc = libvlc_new(0, NULL);
     if(libvlc == NULL) {
 		std::cerr << "LibVLC initialization failure." << std::endl;
 		*errorcode = 4;
@@ -193,7 +195,7 @@ Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SD
 	std::stringstream vidpath;
 	int d = 0;
 	vidpath << basepath.c_str() << VIDEOPATH << fname; //"\\Video" << d << ".divx";
-	//std::cerr << "VidPath: " << vidpath.str().c_str() << std::endl;
+	std::cerr << "VidPath: " << vidpath.str().c_str() << std::endl;
 
 	//check if the path exists. For some reason libVLC doesn't do this check correctly so we have to do it manually!
 	if (!PathFileExistsA(vidpath.str().c_str()))
@@ -238,6 +240,8 @@ Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SD
 	GetStatus();
 
 	context.showVideo = 0;
+	
+	isVisible = 1;
 
 	Invisible();  //make the window invisible until we need it
 
@@ -258,8 +262,16 @@ void Video::SetValidStatus(int status)
 	isValid = status;
 }
 
+int Video::IsValid()
+{
+	return(isValid);
+}
+
+
 int Video::GetStatus()
 {
+
+	float pos;
 
 	if (!isValid)
 		return(-1);
@@ -267,19 +279,46 @@ int Video::GetStatus()
 	//get the status of the video, and update some status flags
 	mpstate = libvlc_media_get_state(m);
 
+	/*
+	if (mpstate == libvlc_Playing)
+	{
+		pos = libvlc_media_player_get_position(mp);
+		//std::cerr << "Video position: " << pos << " : " << libvlc_media_player_get_time(mp) << std::endl;	
+	}
+	else
+		pos = -1; //we did not query the pos state
+	
+	else if (mpstate == libvlc_Ended)
+	{
+		pos = 1.0;
+	}
+	else
+	{
+		//if the state is stopped, we have to briefly play it to get the position
+		libvlc_media_player_play(mp);  //resetting the position only works if the video is playing...
+		pos = libvlc_media_player_get_position(mp);
+		libvlc_media_player_stop(mp);
+		//libvlc_media_player_set_time(mp,0);
+	}
+	*/
+
 	if (hasStarted == 0 && (mpstate == libvlc_Playing))
 	{
 		hasStarted = 1;
 		hasEnded = 0;
 	}
-	else if (hasStarted == 1 && (mpstate == libvlc_Stopped || mpstate == libvlc_Ended) )
+	else if (hasStarted == 1 && ((mpstate == libvlc_Stopped && (vidPos-1.0)<1e-3) || mpstate == libvlc_Ended) ) //(mpstate == libvlc_Stopped && (pos-1.0)<1e-3) || )
 	{
 		hasEnded = 1;
 		//hasStarted = 0; //we will not clear this until requested separately
 	}
+	else if (hasStarted == 1 && (mpstate == libvlc_Stopped || mpstate == libvlc_Paused) )
+	{
+		hasStopped = 1;
+	}
 
 	//std::cerr << "  Video Play Status: " << mpstate << " : (" << hasStarted << "," << hasEnded << ")." << std::endl;
-
+	
 	return(mpstate);
 }
 
@@ -304,10 +343,23 @@ int Video::HasEnded()
 }
 
 
+int Video::HasStopped()
+{
+	if (!isValid)
+		return(-1);
+
+	GetStatus();
+
+	return(hasStopped);
+}
+
 void Video::ResetStatus()
 {
 	hasStarted = 0;
 	hasEnded = 0;
+	hasStopped = 0;
+
+	std::cerr << "Vid status flags reset" << std::endl;
 }
 
 
@@ -325,7 +377,25 @@ int Video::Play()
 
 	GetStatus();
 
-	if (mpstate != libvlc_Playing)
+	std::cerr << "State: " << libvlc_media_get_state(m) << std::endl;
+
+	//if the screen is not visible, sometimes it takes a little for the window to appear
+	//this causes the beginning of the video to cut off
+	//we need to ask for a delay before playing the video
+	
+	//std::cerr << "Vid vis: " << isVisible << std::endl;
+
+	if (mpstate == libvlc_Ended)
+	{
+		status = libvlc_media_player_play(mp);
+		libvlc_media_player_set_position(mp,0.0f); //reset the position so we can play again
+		vidPos = libvlc_media_player_get_position(mp);
+		std::cerr << "Video play from reset position: " << vidPos  << std::endl;  //<< " : " << libvlc_media_player_get_time(mp)
+		
+		GetStatus();
+
+	}
+	else if ((mpstate != libvlc_Playing)) // && ((SDL_GetTicks() - VisTime) > 20))
 	{
 		//start playing the video
 		status = libvlc_media_player_play(mp);
@@ -334,32 +404,50 @@ int Video::Play()
 		//VidIsPlaying = 1;
 		//libvlc_event_attach(mpevent,libvlc_MediaPlayerEndReached,videoEnded,VidIsPlaying); //set up a callback to detect video end
 
+		visTime = SDL_GetTicks();
+
 		GetStatus();
 
+		vidPos = libvlc_media_player_get_position(mp);
+
+	}
+	else if (mpstate == libvlc_Playing)
+	{
+		status = 1;
+		vidPos = libvlc_media_player_get_position(mp);
 	}
 	else
-		status = 1;
+		status = 0;
+
+	std::cerr << "VidPlay State: " << libvlc_media_get_state(m) << std::endl;
+
 
 	return(status);
 }
 
 int Video::Stop()
 {
-	int status = 1;
+	int status = 0;
 
 	if (!isValid)
 		return(-1);
 
 	context.showVideo = 0;
-	Invisible();
-
-	libvlc_media_player_stop(mp);
-	std::cerr << "Request stop video." << std::endl;
+	//Invisible();
 
 	GetStatus();
-	if ((mpstate == libvlc_Ended) || (mpstate == libvlc_Stopped))
+	
+	if (!(mpstate == libvlc_Ended) && !(mpstate == libvlc_Stopped) ) //&& !(mpstate == libvlc_Paused)
 	{
-		status = 0;
+		std::cerr << "Video stop requested...";
+		//libvlc_media_player_stop(mp);
+		//libvlc_media_player_pause(mp);
+		libvlc_media_player_stop(mp);
+		std::cerr << " done." << std::endl;
+		status = 1;
+
+		GetStatus();
+	
 	}
 
 	return(status);
@@ -372,9 +460,10 @@ int Video::Pause()
 		return(-1);
 
 	int status = 0;
+	context.showVideo = 0;
 
 	libvlc_media_player_pause(mp);
-	std::cerr << "Request pause video." << std::endl;
+	std::cerr << "Video pause requested." << std::endl;
 
 	GetStatus();
 	if (mpstate == libvlc_Paused)
@@ -391,14 +480,59 @@ int Video::ResetVid()
 
 	int status = 0;
 	
-	libvlc_media_player_play(mp);  //resetting the position only works if the video is playing...
-	libvlc_media_player_set_position(mp,0.0f);
-	libvlc_media_player_set_time(mp,0);
-	float pos = libvlc_media_player_get_position(mp);
-	std::cerr << "Video position: " << pos << " : " << libvlc_media_player_get_time(mp) << std::endl;
-	if (pos == 0.0f)
-		status = 1;
-	libvlc_media_player_stop(mp);
+	//libvlc_media_player_play(mp);  //resetting the position only works if the video is playing...
+
+	GetStatus();
+
+	if (mpstate == libvlc_Stopped)
+	{
+		libvlc_media_player_play(mp); //if the video is stopped, we have to play it so that we can reset the position.
+		libvlc_media_player_set_position(mp,0.0f);
+		//libvlc_media_player_set_time(mp,0);
+		vidPos = libvlc_media_player_get_position(mp);
+		std::cerr << "Video position: " << vidPos  << std::endl;  //<< " : " << libvlc_media_player_get_time(mp)
+		if ((vidPos - 0.0f) < 1e-4)
+			status = 1;
+		//libvlc_media_player_pause(mp);
+		libvlc_media_player_stop(mp);
+	}
+	else if (mpstate == libvlc_Ended)
+	{
+		//from the ended state, resetting the position can cause problems...
+		//we ask to stop the video to change its state, then we can play and reset its position.
+
+		libvlc_media_player_stop(mp);
+		libvlc_media_player_play(mp);
+		libvlc_media_player_set_position(mp,0.0f);
+		vidPos = libvlc_media_player_get_position(mp);
+		libvlc_media_player_stop(mp);
+		std::cerr << "Video position: " << vidPos  << std::endl;  //<< " : " << libvlc_media_player_get_time(mp)
+		if ((vidPos - 0.0f) < 1e-4)
+			status = 1;
+		
+	}
+	else if (mpstate == libvlc_Playing)
+	{
+		libvlc_media_player_set_position(mp,0.0f);
+		vidPos = libvlc_media_player_get_position(mp);
+		std::cerr << "Video position: " << vidPos  << std::endl;  //<< " : " << libvlc_media_player_get_time(mp)
+		if ((vidPos - 0.0f) < 1e-4)
+			status = 1;
+		libvlc_media_player_stop(mp);
+		
+	}
+	else if (mpstate == libvlc_Paused)
+	{
+		//libvlc_media_player_play(mp);  //from the paused state, it seems like we can reset the position without first playing
+		libvlc_media_player_set_position(mp,0.0f);
+		vidPos = libvlc_media_player_get_position(mp);
+		std::cerr << "Video position: " << vidPos  << std::endl;  //<< " : " << libvlc_media_player_get_time(mp)
+		if ((vidPos - 0.0f) < 1e-4)
+			status = 1;
+		libvlc_media_player_stop(mp);
+	}
+
+	std::cerr << "Video State: " << libvlc_media_get_state(m) << std::endl;
 
 	ResetStatus();
 
@@ -408,20 +542,41 @@ int Video::ResetVid()
 
 void Video::Visible()
 {
+	
+	Uint32 winFlags;
+
 	SDL_ShowWindow(context.window);
+	winFlags = SDL_GetWindowFlags(context.window);
+	if (winFlags & SDL_WINDOW_SHOWN && ~isVisible)
+	{
+		std::cerr << "Vid window is visible." << std::endl;
+		visTime = SDL_GetTicks();
+		isVisible = 1;
+	}
+	
 }
 
 void Video::Invisible()
 {
+	Uint32 winFlags;
+
 	SDL_HideWindow(context.window);
+	winFlags = SDL_GetWindowFlags(context.window);
+	if (winFlags & SDL_WINDOW_HIDDEN)
+	{
+		std::cerr << "Vid window is hidden." << std::endl;
+		isVisible = 0;
+	}
+	
 }
 
 
 
 void Video::CleanUp()
 {
-	if (isValid > 0) //only try to delete something that exists!
+	if (isValid > 0)
 	{
+		
 		// Stop stream and clean up libVLC.
 		libvlc_media_player_stop(mp);
 		libvlc_media_player_release(mp);

@@ -50,8 +50,13 @@ private:
 	//some status parameters
 	int hasStarted;
 	int hasEnded;
+	int hasStopped;
 
+	
 	int isValid;  //flag to identify that the video is actually valid!
+	int isVisible;
+	Uint32 visTime;
+	float vidPos;
 
 public:
 
@@ -62,8 +67,10 @@ public:
 	void SetPos(int x, int y); //function to set the position of the video on the screen
 
 	int GetStatus();	//function to get the current status (updates and returns VLC state)
+	int IsValid();		//querry if the current video is valids
 	int HasStarted();	//function to find out if video playing has started
-	int HasEnded();		//function to find out if video playing has ended or has been stopped
+	int HasEnded();		//function to find out if video playing has ended
+	int HasStopped();	//function to find out if the video playing has stopped
 	void ResetStatus();	//reset the status flags - does NOT affect the actual video status
 	void SetValidStatus(int status);
 
