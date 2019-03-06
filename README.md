@@ -9,9 +9,10 @@ This code is meant to be a work in progress, with new functionality added as nee
 
 This code base currently runs on Visual Studio 2010, using SDL2, OpenGL, and VLC3.06. Long-term goals are to eventually update this code base to run in newer versions of Visual Studio (which will provide the additional flexibility of running them on Windows 10 machines or on machines for which the .NET framework has been updated). However, this is unlikely to happen any time soon unless the need arises. A second long-term goal to develop a dual-display version of this code that will allow for separate experimenter and experimentee experiences; however this likely will require some significant changes in how images are drawn to the screen and is therefore also unlikely to happen anytime soon.
 
-This code is made freely available for public use; if used, please acknowledge the developers of this code: <br />
+This code is made freely available for public use; if used, please acknowledge the original developers of this code: <br />
+    Aaron L. Wong <br />
     Adrian M. Haith <br />
     Aneesh Roy <br />
     Promit Roy <br />
-    Aaron L. Wong <br />
 
+For questions or concerns, please consult Aaron L. Wong, who is currently maintaining this repository.
