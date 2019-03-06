@@ -59,7 +59,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)\vlc-3.0.6\sdk\lib;$(ProjectDir)\trakSTAR;$(ProjectDir)\SDL2-2.0.5\lib\x86;$(ProjectDir)\FTDI\i386;$(ProjectDir)\Flock_of_Birds;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;glu32.lib;SDL2.lib;SDL2main.lib;SDL2_mixer.lib;SDL2_ttf.lib;SDL2_image.lib;Bird.lib;ftd2xx.lib;ATC3DG.lib;libvlc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glu32.lib;SDL2.lib;SDL2main.lib;SDL2_mixer.lib;SDL2_ttf.lib;SDL2_image.lib;Bird.lib;ftd2xx.lib;ATC3DG.lib;libvlc.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -97,7 +97,7 @@
     <ClInclude Include="TargetFrame.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="TrackBird.h" />
-    <ClInclude Include="vlcVideoPlayer.h" />
+    <ClInclude Include="vlcVideoPlayerSM.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Circle.cpp" />
@@ -115,7 +115,7 @@
     <ClCompile Include="SpeedBar.cpp" />
     <ClCompile Include="Timer.cpp" />
     <ClCompile Include="TrackBird.cpp" />
-    <ClCompile Include="vlcVideoPlayer.cpp" />
+    <ClCompile Include="vlcVideoPlayerSM.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

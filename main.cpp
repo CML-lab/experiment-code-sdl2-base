@@ -22,7 +22,7 @@
 #include "SpeedBar.h"
 #include "Timer.h"
 #include "Image.h"
-#include "vlcVideoPlayer.h"
+#include "vlcVideoPlayerSM.h"
 
 #include "config.h"
 
@@ -79,7 +79,7 @@ Timer* trialTimer;
 Timer* hoverTimer;
 Timer* movTimer;
 
-Video *Vid;
+VideoSM *Vid;
 
 //Uint32 gameTimer;
 //Uint32 hoverTimer;
@@ -454,7 +454,7 @@ bool init()
 	std::stringstream vidfile;
 	int errorcode;
 	vidfile << "Video0.divx";
-	Vid = new Video(vidfile.str().c_str(),SCREEN_WIDTH/2,SCREEN_HEIGHT/4,VIDEO_WIDTH,VIDEO_HEIGHT,&errorcode);
+	Vid = new VideoSM(vidfile.str().c_str(),SCREEN_WIDTH/2,SCREEN_HEIGHT/4,VIDEO_WIDTH,VIDEO_HEIGHT,&errorcode);
 	if (errorcode != 0)
 		{
 			std::cerr << "Video did not load correctly." << std::endl;
@@ -745,6 +745,7 @@ static void draw_screen()
 
 	player->Draw();
 
+	Vid->Update();
 
 	// Draw text - provide feedback at the end of the block
 	text->Draw(0.6f, 0.5f);

@@ -66,7 +66,7 @@
     <ClInclude Include="SpeedBar.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="vlcVideoPlayer.h">
+    <ClInclude Include="vlcVideoPlayerSM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -116,7 +116,7 @@
     <ClCompile Include="SpeedBar.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="vlcVideoPlayer.cpp">
+    <ClCompile Include="vlcVideoPlayerSM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
