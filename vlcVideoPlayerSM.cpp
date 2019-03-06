@@ -89,7 +89,7 @@ void display(void *data, void *id) {
 
 
 
-VideoSM::VideoSM(const char* fname, int x, int y, int w, int h, int* errorcode) //SDL_Renderer *renderer, SDL_Texture *texture, SDL_mutex *mutex, SDL_Rect rect)
+Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SDL_Renderer *renderer, SDL_Texture *texture, SDL_mutex *mutex, SDL_Rect rect)
 {
 	//Note, this constructor does the "bad" thing of potentially failing, in which case it does not return a valid initialized object.
 	//We need an external way to catch when this happens. To do so, we will pass it an "errorcode" that it will write into before it exits.
@@ -269,7 +269,7 @@ VideoSM::VideoSM(const char* fname, int x, int y, int w, int h, int* errorcode) 
 }
 
 //function to control/update the state machine
-int VideoSM::Update()
+int Video::Update()
 {
 
 	int status = 0;
@@ -516,7 +516,7 @@ int VideoSM::Update()
 
 
 
-void VideoSM::SetPos(int x, int y)
+void Video::SetPos(int x, int y)
 {
 	context.xpos = x;
 	context.ypos = y;
@@ -524,18 +524,18 @@ void VideoSM::SetPos(int x, int y)
 }
 
 
-void VideoSM::SetValidStatus(int status)
+void Video::SetValidStatus(int status)
 {
 	isValid = status;
 }
 
-int VideoSM::IsValid()
+int Video::IsValid()
 {
 	return(isValid);
 }
 
 
-int VideoSM::GetStatus()
+int Video::GetStatus()
 {
 
 	float pos;
@@ -568,7 +568,7 @@ int VideoSM::GetStatus()
 	return(mpstate);
 }
 
-int VideoSM::HasStarted()
+int Video::HasStarted()
 {
 	if (!isValid)
 		return(-1);
@@ -576,7 +576,7 @@ int VideoSM::HasStarted()
 	return(hasStarted);
 }
 
-int VideoSM::HasEnded()
+int Video::HasEnded()
 {
 	if (!isValid)
 		return(-1);
@@ -585,7 +585,7 @@ int VideoSM::HasEnded()
 }
 
 
-int VideoSM::HasStopped()
+int Video::HasStopped()
 {
 	if (!isValid)
 		return(-1);
@@ -593,7 +593,7 @@ int VideoSM::HasStopped()
 	return(hasStopped);
 }
 
-void VideoSM::ResetStatus()
+void Video::ResetStatus()
 {
 	hasStarted = 0;
 	hasEnded = 0;
@@ -603,7 +603,7 @@ void VideoSM::ResetStatus()
 }
 
 
-int VideoSM::Play()
+int Video::Play()
 {
 	//returns 0 if playback started.
 
@@ -653,7 +653,7 @@ int VideoSM::Play()
 	return(0);
 }
 
-int VideoSM::Stop()
+int Video::Stop()
 {
 	int status = 0;
 
@@ -684,7 +684,7 @@ int VideoSM::Stop()
 	return(0);
 }
 
-int VideoSM::Pause()
+int Video::Pause()
 {
 
 	if (!isValid)
@@ -708,7 +708,7 @@ int VideoSM::Pause()
 }
 
 
-int VideoSM::ResetVid()
+int Video::ResetVid()
 {
 	if (!isValid)
 		return(-1);
@@ -763,7 +763,7 @@ int VideoSM::ResetVid()
 	*/
 }
 
-int VideoSM::VidLoad(const char* fname)
+int Video::VidLoad(const char* fname)
 {
 	int status = 0;
 
@@ -850,7 +850,7 @@ int VideoSM::VidLoad(const char* fname)
 }
 
 
-int VideoSM::LoadNewVid(const char* fname)
+int Video::LoadNewVid(const char* fname)
 {
 	int status;
 
@@ -866,7 +866,7 @@ int VideoSM::LoadNewVid(const char* fname)
 
 }
 
-void VideoSM::Visible()
+void Video::Visible()
 {
 	
 	Uint32 winFlags;
@@ -882,7 +882,7 @@ void VideoSM::Visible()
 	
 }
 
-void VideoSM::Invisible()
+void Video::Invisible()
 {
 	Uint32 winFlags;
 
@@ -898,7 +898,7 @@ void VideoSM::Invisible()
 
 
 
-void VideoSM::CleanUp()
+void Video::CleanUp()
 {
 	if (isValid > 0)
 	{

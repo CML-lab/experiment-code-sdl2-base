@@ -79,7 +79,7 @@ Timer* trialTimer;
 Timer* hoverTimer;
 Timer* movTimer;
 
-VideoSM *Vid;
+Video *Vid;
 
 //Uint32 gameTimer;
 //Uint32 hoverTimer;
@@ -454,7 +454,7 @@ bool init()
 	std::stringstream vidfile;
 	int errorcode;
 	vidfile << "Video0.divx";
-	Vid = new VideoSM(vidfile.str().c_str(),SCREEN_WIDTH/2,SCREEN_HEIGHT/4,VIDEO_WIDTH,VIDEO_HEIGHT,&errorcode);
+	Vid = new Video(vidfile.str().c_str(),SCREEN_WIDTH/2,SCREEN_HEIGHT/4,VIDEO_WIDTH,VIDEO_HEIGHT,&errorcode);
 	if (errorcode != 0)
 		{
 			std::cerr << "Video did not load correctly." << std::endl;

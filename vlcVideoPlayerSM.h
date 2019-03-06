@@ -2,6 +2,32 @@
 #define VLCVIDEOPLAYERSM_H
 #pragma once
 
+/************************************************************************
+This version of the VLC Video Player uses a state machine, rather than
+ relying on asynchronous calls to the libvlc. The reason for this change
+ is to improve the stability of the object and reduce deadlocking arising
+ from too many successive calls to libvlc media player that can cause race
+ conditions. Here, we wait for acknowledgements about changes in state before
+ continuing with various multi-step operations such as resetting the video. 
+
+ This approach appears to work, but has not been fully tested as of 3/6/2019.
+ To implement this object, use the function calls to request changes in state
+ of the video player (e.g., play, stop, reset, etc) but also remember to call
+ Update() on every loop (e.g., in conjunction with each pass through the main
+ state machine controlling the experiment) to keep the Video Player state
+ machine updated and to allow all commands to complete for a given state change
+ request. 
+
+ Note, this player does NOT require VLC to be installed on the current computer.
+ However, it may require that a copy of the VLC plugins folder be placed in the
+ same parent folder as the program executable (along with libvlc.dll and 
+ libvlccore.dll). It also requires that Shlwapi.lib be added to the linker properties.
+
+
+ */
+
+
+
 #include <SDL.h>
 #include <SDL_mutex.h>
 #include "SDL_filesystem.h"
@@ -10,9 +36,8 @@
 #include <sstream>
 #include "vlc/vlc.h"
 #include <Shlwapi.h>
-#include <direct.h>
 
-//be sure to add Shlwapi.lib in the linker properties!
+
 
 struct ctx {
 	SDL_Window *window;
@@ -37,7 +62,7 @@ static void display(void *data, void *id);
 
 
 
-class VideoSM
+class Video
 {
 private:
 	struct ctx context; //Video/SDL context
@@ -84,9 +109,9 @@ private:
 
 public:
 
-	VideoSM(const char* fname, int x, int y, int w, int h, int* errorcode);  //constructor function
+	Video(const char* fname, int x, int y, int w, int h, int* errorcode);  //constructor function
 	//int Init();
-	~VideoSM() { };
+	~Video() { };
 	
 	void SetPos(int x, int y); //function to set the position of the video on the screen
 
