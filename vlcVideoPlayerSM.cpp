@@ -248,10 +248,6 @@ Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SD
 	ResetStatus();
 	GetStatus();
 
-	context.showVideo = 0;
-	
-	isVisible = 0;
-
 	Invisible();  //make the window invisible until we need it
 
 	std::cerr << "Video: " << vidpath.str().c_str() << " load complete: status = " << *errorcode << "." << std::endl;
@@ -294,7 +290,10 @@ int Video::Update()
 			//this is just an empy state to wait until the video has finished loading
 
 			if (requestload == 0)
+			{
+				std::cerr << ">>Leaving VidLoad state to VidIdle state." << std::endl;
 				state = Idle;
+			}
 
 			break; //end load state
 
@@ -305,11 +304,12 @@ int Video::Update()
 			if (requestplay == 1)
 			{
 				//request to play has come in; try to play
-				context.showVideo = 1;
-				Visible();
+				if (isVisible == 0)
+					Visible();
 				
 				status = libvlc_media_player_play(mp);
-				
+				std::cerr << ">>VidIdle state: Play requested." << std::endl;
+
 				if (status == 0)
 					requestplay = 2;
 			}
@@ -317,18 +317,25 @@ int Video::Update()
 			{
 				
 				if (mpstate == libvlc_Playing)
+				{
+					std::cerr << ">>Leaving VidIdle state to VidPlay state." << std::endl;
 					state = Playing;
+				}
 			}
 
 			//request to load a new video
 			if (requestload == 1)
 			{
+				std::cerr << ">>Leaving VidIdle state to VidLoad state." << std::endl;
 				state = Load;
 			}
 
 			//request rewind
 			if (requestrewind == 1)
+			{
+				std::cerr << ">>Leaving VidIdle state to VidRewind state." << std::endl;
 				state = Rewind;
+			}
 
 			if (requeststop == 1)
 				requeststop = 0; //ignore this request since we are already stopped
@@ -345,15 +352,25 @@ int Video::Update()
 
 			//see if the state has changed; if so, obey this transition
 			if (mpstate == libvlc_Stopped)
+			{
+				std::cerr << ">>Leaving VidPlay state to VidStopped state." << std::endl;
 				state = Stopped;
+			}
 			else if (mpstate == libvlc_Ended)
+			{
+				std::cerr << ">>Leaving VidPlay state to VidEnded state." << std::endl;
 				state = Ended;
+			}
 			else if (mpstate == libvlc_Paused)
+			{
+				std::cerr << ">>Leaving VidPlay state to VidPaused state." << std::endl;
 				state = Paused;
+			}
 
 			//if we haven't transitioned states, check if there are any transition requests
 			if (requestpause == 1)
 			{
+				std::cerr << ">>VidPlay state: Pause requested." << std::endl;
 				libvlc_media_player_pause(mp);
 
 				requestpause = 2;
@@ -361,7 +378,7 @@ int Video::Update()
 			else if (requeststop == 1)
 			{
 				libvlc_media_player_stop(mp);
-				
+				std::cerr << ">>VidPlay state: Stop requested." << std::endl;
 				requeststop = 2;
 			}
 			
@@ -371,24 +388,34 @@ int Video::Update()
 		case Paused:
 
 			requestpause = 0;
-
+			
 			//see if the state has changed; if so, obey this transition
 			if (mpstate == libvlc_Stopped)
+			{
+				std::cerr << ">>Leaving VidPaused state to VidStopped state." << std::endl;
 				state = Stopped;
+			}
 			else if (mpstate == libvlc_Ended)
+			{
+				std::cerr << ">>Leaving VidPaused state to VidEnded state." << std::endl;
 				state = Ended;
+			}
 			else if (mpstate == libvlc_Playing)
+			{
+				std::cerr << ">>Leaving VidPaused state to VidPlay state." << std::endl;
 				state = Playing;
+			}
 
 			//if we haven't transitioned states, check if there are any transition requests
 			if (requestplay == 1)
 			{
 				//request to play has come in; try to play
-				context.showVideo = 1;
-				Visible();
+				if (isVisible == 0)
+					Visible();
 				
+				std::cerr << ">>VidPaused state: Play requested." << std::endl;
 				status = libvlc_media_player_play(mp);
-				
+
 				if (status == 0)
 					requestplay = 2;
 				else
@@ -396,9 +423,15 @@ int Video::Update()
 			}
 			else if (requeststop == 1)
 			{
+				std::cerr << ">>VidPaused state: Stop requested." << std::endl;
 				libvlc_media_player_stop(mp);
 
 				requeststop = 2;
+			}
+			else if (requestrewind == 1)
+			{
+				std::cerr << ">>VidPaused state: Rewind requested." << std::endl;
+				state = Rewind;
 			}
 			
 
@@ -411,16 +444,23 @@ int Video::Update()
 
 			//see if the state has changed; if so, obey this transition
 			if (mpstate == libvlc_Ended)
+			{
+				std::cerr << ">>Leaving VidStopped state to VidEnded state." << std::endl;
 				state = Ended;
+			}
 			else if (mpstate == libvlc_Playing)
+			{
+				std::cerr << ">>Leaving VidStopped state to VidPlay state." << std::endl;
 				state = Playing;
+			}
 
 			if (requestplay==1)
 			{
 				//request to play has come in; try to play
-				context.showVideo = 1;
-				Visible();
+				if (isVisible == 0)
+					Visible();
 				
+				std::cerr << ">>VidStopped state: Play requested." << std::endl;
 				status = libvlc_media_player_play(mp);
 				
 				if (status == 0)
@@ -431,7 +471,10 @@ int Video::Update()
 			else if (requestpause == 1)
 				requestpause = 0;	//we don't accept this request because we are not playing
 			else if (requestrewind == 1)
+			{
+				std::cerr << ">>VidStopped state: Rewind requested." << std::endl;
 				state = Rewind;
+			}
 
 			break; //end stopped state
 
@@ -440,10 +483,15 @@ int Video::Update()
 			hasEnded = 1;
 
 			if (requestrewind == 1)
+			{
+				std::cerr << ">>Leaving VidEnded state to Rewind state." << std::endl;
 				state = Rewind;
+			}
 			
 			if (requestplay == 1)
 			{
+				std::cerr << ">>VidEnded state: Play requested. Rewinding first." << std::endl;
+
 				//we must rewind first
 				requestrewind = 1;
 				state = Rewind;
@@ -458,25 +506,31 @@ int Video::Update()
 
 		case Rewind:
 
-			Invisible();
-			context.showVideo = 0;
+			if (isVisible == 1)
+				Invisible();
 
 			//to rewind we need to be in play state
 			if (requestrewind == 1)
 			{
-				if (mpstate = libvlc_Ended)
+				if (mpstate == libvlc_Ended)
 				{
+					std::cerr << ">> Rewind state = Ended; Stop requested." << std::endl;
+
 					//we need to change the state to stopped first otherwise we cannot play
 					libvlc_media_player_stop(mp);
-
+					
+					//if (mpstate = libvlc_Stopped)
+					//	requestrewind = 2;
 				}
-				else if (mpstate = libvlc_Paused)
+				else if (mpstate == libvlc_Paused)
 				{
 					//if we are paused this is a "play" state, so we can just rewind without having to play first
 					requestrewind = 2;
 				}
-				else //(mpstate = libvlc_Stopped)
+				else //(mpstate == libvlc_Stopped)
 				{
+					std::cerr << ">> Rewind state = Stopped; Play requested." << std::endl;
+
 					status = libvlc_media_player_play(mp);
 				
 					if (status == 0)
@@ -489,7 +543,7 @@ int Video::Update()
 				//now that we are playing we can set the position and stop - we need to do this quickly before we transition back to the Ended state
 				libvlc_media_player_set_position(mp,0.0f);
 				vidPos = libvlc_media_player_get_position(mp);
-				std::cerr << "Video position: " << vidPos  << std::endl;  //<< " : " << libvlc_media_player_get_time(mp)
+				std::cerr << ">>Video position: " << vidPos  << std::endl;  //<< " : " << libvlc_media_player_get_time(mp)
 				if ((vidPos - 0.0f) < 1e-4)
 					status = 1;
 				
@@ -498,12 +552,14 @@ int Video::Update()
 			}
 			else if (requestrewind == 3)
 			{
+				std::cerr << ">> Rewind state = Play/Pos Reset; Stop requested." << std::endl;
 				libvlc_media_player_set_position(mp,0.0f);  //reset the position again just in case there was a long delay before we got baak here
 				libvlc_media_player_stop(mp);
 				
 				ResetStatus();
 				requestrewind = 0;
 				state = Idle;
+				std::cerr << ">>Leaving VidRewind state to VidIdle state." << std::endl;
 			}
 			
 			break; //end rewind state
@@ -599,7 +655,7 @@ void Video::ResetStatus()
 	hasEnded = 0;
 	hasStopped = 0;
 
-	std::cerr << "Vid status flags reset" << std::endl;
+	std::cerr << ">Vid status flags reset" << std::endl;
 }
 
 
@@ -840,10 +896,6 @@ int Video::VidLoad(const char* fname)
 	ResetStatus();
 	GetStatus();
 
-	context.showVideo = 0;
-	
-	isVisible = 0;
-
 	Invisible();  //make the window invisible until we need it
 
 	return(0);
@@ -873,11 +925,12 @@ void Video::Visible()
 
 	SDL_ShowWindow(context.window);
 	winFlags = SDL_GetWindowFlags(context.window);
-	if (winFlags & SDL_WINDOW_SHOWN && ~isVisible)
+	if ((winFlags & SDL_WINDOW_SHOWN) ) //&& !isVisible
 	{
-		std::cerr << "Vid window is visible." << std::endl;
+		std::cerr << ">Vid window is visible." << std::endl;
 		visTime = SDL_GetTicks();
 		isVisible = 1;
+		context.showVideo = 1;  //allow request to actually render video
 	}
 	
 }
@@ -888,15 +941,19 @@ void Video::Invisible()
 
 	SDL_HideWindow(context.window);
 	winFlags = SDL_GetWindowFlags(context.window);
-	if (winFlags & SDL_WINDOW_HIDDEN)
+	if ((winFlags & SDL_WINDOW_HIDDEN) ) //&& isVisible != 0
 	{
-		std::cerr << "Vid window is hidden." << std::endl;
+		std::cerr << ">Vid window is hidden." << std::endl;
 		isVisible = 0;
+		context.showVideo = 0;  //shut off request to actually render video
 	}
 	
 }
 
-
+int Video::VisibleState()
+{
+	return(isVisible);
+}
 
 void Video::CleanUp()
 {

@@ -133,6 +133,7 @@ public:
 	
 	void Visible();	//make the video window visible
 	void Invisible(); //make the video window invisible
+	int VisibleState(); //querry the visibility state
 
 	void CleanUp();	//cleans up VLC stuff
 
