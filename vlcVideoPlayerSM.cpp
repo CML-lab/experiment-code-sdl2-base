@@ -98,7 +98,7 @@ Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SD
 
 	*errorcode = 0;
 
-	isValid = 1;
+	isValid = 0;
 
 
 	//we need absolute paths, so we must figure out the project directory
@@ -199,8 +199,56 @@ Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SD
         //return EXIT_FAILURE;
     }
 
+	*errorcode = LoadNewVid(fname);
+	//if we got this far, isValid has been set by the LoadNewVid function so we don't need to reset it
+	//isValid = 1;
+
+	std::cerr << "Video: " << fname << " load complete: status = " << *errorcode << "." << std::endl;
+
+	//set up the State Machine and initialize SM flags
+	state = Idle;
+	enteredstate = false;
+	
+	requestplay = 0;
+	requeststop = 0;
+	requestpause = 0;
+	requestrewind = 0;
+	requestload = 0;
+	
+}
+
+
+//function to load new video (only calls libvlc, not affect SDL window
+int Video::LoadNewVid(const char* fname)
+{
+	int status = 0;
+
+	requestload = 1;
+	//status = VidLoad(fname);
+
+	int w = context.rect.w;
+	int h = context.rect.h;
+
+	if (isValid > 0)
+	{
+		
+		// Stop stream and clean up libVLC.
+		if (hasStopped == 0)
+			libvlc_media_player_stop(mp);
+
+		libvlc_media_player_release(mp);
+	}
+	
 	//set up the video file to be played
-	//libVLC wants an absolute path, so we will start from the project directory path we figured out above
+	//libVLC wants an absolute path, so we will figure out the project directory
+	char *bpath = SDL_GetBasePath();
+	std::string basepath;
+	basepath.assign(bpath);
+	//std::cerr << "BasePath: " << basepath.c_str() << std::endl;
+	basepath.erase(basepath.rfind("\\"),1); //get rid of the last slash in the path
+	basepath.erase(basepath.rfind("\\")+1,10); //get rid of the "Debug" folder name to get to the project folder
+	//std::cerr << "ModBasePath: " << basepath.c_str() << std::endl;
+
 	std::stringstream vidpath;
 	int d = 0;
 	vidpath << basepath.c_str() << VIDEOPATH << fname; //"\\Video" << d << ".divx";
@@ -210,9 +258,9 @@ Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SD
 	if (!PathFileExistsA(vidpath.str().c_str()))
 	{
 		std::cerr << "Video file/path does not exist." << std::endl;
-		*errorcode = 5;
+		status = 5;
 		isValid = 0;
-		return;
+		return(status);
 	}
 
 	//open the video file
@@ -220,9 +268,9 @@ Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SD
 	if (m == NULL)
 	{
 		std::cerr << "Media path not valid." << std::endl;
-		*errorcode = 6;
+		status = 6;
 		isValid = 0;
-		return;
+		return(status);
 	}
 	//else
 		//std::cerr << "Media path: " << m << std::endl;
@@ -231,9 +279,9 @@ Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SD
 	if (mp == NULL)
 	{
 		std::cerr << "Media Player not created." << std::endl;
-		*errorcode = 7;
+		status = 7;
 		isValid = 0;
-		return;
+		return(status);
 	}
 
     libvlc_media_release(m);
@@ -250,19 +298,19 @@ Video::Video(const char* fname, int x, int y, int w, int h, int* errorcode) //SD
 
 	Invisible();  //make the window invisible until we need it
 
-	std::cerr << "Video: " << vidpath.str().c_str() << " load complete: status = " << *errorcode << "." << std::endl;
-	//set up the State Machine
-	state = Idle;
-	enteredstate = false;
-	
-	requestplay = 0;
-	requeststop = 0;
-	requestpause = 0;
-	requestrewind = 0;
+	//flag that we tried to load
 	requestload = 0;
-	
+
+	if (status != 0)
+		isValid = 0;
+	else
+		isValid = 1;
+
+	return(status);
 
 }
+
+
 
 //function to control/update the state machine
 int Video::Update()
@@ -283,6 +331,7 @@ int Video::Update()
 	
 	GetStatus();
 
+	//figure out what state we are in and do accordingly
 	switch(state)
 	{
 		case Load:
@@ -366,6 +415,11 @@ int Video::Update()
 				std::cerr << ">>Leaving VidPlay state to VidPaused state." << std::endl;
 				state = Paused;
 			}
+			else if (mpstate != libvlc_Playing)
+			{
+				std::cerr << ">>Invalid state, returning to Idle." << std::endl;
+				state = Idle;
+			}
 
 			//if we haven't transitioned states, check if there are any transition requests
 			if (requestpause == 1)
@@ -404,6 +458,11 @@ int Video::Update()
 			{
 				std::cerr << ">>Leaving VidPaused state to VidPlay state." << std::endl;
 				state = Playing;
+			}
+			else if (mpstate != libvlc_Paused)
+			{
+				std::cerr << ">>Invalid state, returning to Idle." << std::endl;
+				state = Idle;
 			}
 
 			//if we haven't transitioned states, check if there are any transition requests
@@ -452,6 +511,11 @@ int Video::Update()
 			{
 				std::cerr << ">>Leaving VidStopped state to VidPlay state." << std::endl;
 				state = Playing;
+			}
+			else if (mpstate != libvlc_Stopped)
+			{
+				std::cerr << ">>Invalid state, returning to Idle." << std::endl;
+				state = Idle;
 			}
 
 			if (requestplay==1)
@@ -602,23 +666,6 @@ int Video::GetStatus()
 	//get the status of the video, and update some status flags
 	mpstate = libvlc_media_get_state(m);
 
-	/*
-	if (hasStarted == 0 && (mpstate == libvlc_Playing))
-	{
-		hasStarted = 1;
-		hasEnded = 0;
-	}
-	else if (hasStarted == 1 && ((mpstate == libvlc_Stopped && (vidPos-1.0)<1e-3) || mpstate == libvlc_Ended) ) //(mpstate == libvlc_Stopped && (pos-1.0)<1e-3) || )
-	{
-		hasEnded = 1;
-		//hasStarted = 0; //we will not clear this until requested separately
-	}
-	else if (hasStarted == 1 && (mpstate == libvlc_Stopped || mpstate == libvlc_Paused) )
-	{
-		hasStopped = 1;
-	}
-	*/
-
 	//std::cerr << "  Video Play Status: " << mpstate << " : (" << hasStarted << "," << hasEnded << ")." << std::endl;
 	
 	return(mpstate);
@@ -668,44 +715,8 @@ int Video::Play()
 
 	requestplay = 1;
 
-	/*
-	if (mpstate == libvlc_Ended)
-	{
-		
-		libvlc_media_player_set_position(mp,0.0f); //reset the position so we can play again
-		vidPos = libvlc_media_player_get_position(mp);
-		std::cerr << "Video play from reset position: " << vidPos  << std::endl;  //<< " : " << libvlc_media_player_get_time(mp)
-		
-		GetStatus();
-
-	}
-	else if ((mpstate != libvlc_Playing)) // && ((SDL_GetTicks() - VisTime) > 20))
-	{
-		//start playing the video
-		status = libvlc_media_player_play(mp);
-		std::cerr << "Play video." << std::endl;
-
-		//VidIsPlaying = 1;
-		//libvlc_event_attach(mpevent,libvlc_MediaPlayerEndReached,videoEnded,VidIsPlaying); //set up a callback to detect video end
-
-		visTime = SDL_GetTicks();
-
-		GetStatus();
-
-		vidPos = libvlc_media_player_get_position(mp);
-
-	}
-	else if (mpstate == libvlc_Playing)
-	{
-		status = 1;
-		vidPos = libvlc_media_player_get_position(mp);
-	}
-	else
-		status = 0;
-
-	std::cerr << "VidPlay State: " << libvlc_media_get_state(m) << std::endl;
-	*/
-
+	//std::cerr << "VidPlay State: " << libvlc_media_get_state(m) << std::endl;
+	
 	return(0);
 }
 
@@ -718,25 +729,6 @@ int Video::Stop()
 
 	requeststop = 1;
 
-	/*
-	context.showVideo = 0;
-	//Invisible();
-
-	
-	if (!(mpstate == libvlc_Ended) && !(mpstate == libvlc_Stopped) ) //&& !(mpstate == libvlc_Paused)
-	{
-		std::cerr << "Video stop requested...";
-		//libvlc_media_player_stop(mp);
-		//libvlc_media_player_pause(mp);
-		libvlc_media_player_stop(mp);
-		std::cerr << " done." << std::endl;
-		status = 1;
-
-		GetStatus();
-	
-	}
-	*/
-
 	return(0);
 }
 
@@ -748,17 +740,6 @@ int Video::Pause()
 
 	requestpause = 1;
 
-	/*
-	int status = 0;
-	context.showVideo = 0;
-
-	libvlc_media_player_pause(mp);
-	std::cerr << "Video pause requested." << std::endl;
-
-	GetStatus();
-	if (mpstate == libvlc_Paused)
-		status = 1;
-	*/
 	return(0);
 
 }
@@ -770,153 +751,13 @@ int Video::ResetVid()
 		return(-1);
 
 	requestrewind = 1;
-
-	/*
-	int status = 0;
-	
-		}
-	else if (mpstate == libvlc_Ended)
-	{
-		//from the ended state, resetting the position can cause problems...
-		//we ask to stop the video to change its state, then we can play and reset its position.
-
-		libvlc_media_player_stop(mp);
-		libvlc_media_player_play(mp);
-		libvlc_media_player_set_position(mp,0.0f);
-		vidPos = libvlc_media_player_get_position(mp);
-		libvlc_media_player_stop(mp);
-		std::cerr << "Video position: " << vidPos  << std::endl;  //<< " : " << libvlc_media_player_get_time(mp)
-		if ((vidPos - 0.0f) < 1e-4)
-			status = 1;
 		
-	}
-	else if (mpstate == libvlc_Playing)
-	{
-		libvlc_media_player_set_position(mp,0.0f);
-		vidPos = libvlc_media_player_get_position(mp);
-		std::cerr << "Video position: " << vidPos  << std::endl;  //<< " : " << libvlc_media_player_get_time(mp)
-		if ((vidPos - 0.0f) < 1e-4)
-			status = 1;
-		libvlc_media_player_stop(mp);
-		
-	}
-	else if (mpstate == libvlc_Paused)
-	{
-		//libvlc_media_player_play(mp);  //from the paused state, it seems like we can reset the position without first playing
-		libvlc_media_player_set_position(mp,0.0f);
-		vidPos = libvlc_media_player_get_position(mp);
-		std::cerr << "Video position: " << vidPos  << std::endl;  //<< " : " << libvlc_media_player_get_time(mp)
-		if ((vidPos - 0.0f) < 1e-4)
-			status = 1;
-		libvlc_media_player_stop(mp);
-	}
-
-	std::cerr << "Video State: " << libvlc_media_get_state(m) << std::endl;
-
-	ResetStatus();
-
-	return(status);
-	*/
-}
-
-int Video::VidLoad(const char* fname)
-{
-	int status = 0;
-
-	int w = context.rect.w;
-	int h = context.rect.h;
-
-	if (isValid > 0)
-	{
-		
-		// Stop stream and clean up libVLC.
-		if (hasStopped == 0)
-			libvlc_media_player_stop(mp);
-
-		libvlc_media_player_release(mp);
-	}
-	
-	//flag that we tried to load
-	requestload = 0;
-
-	//set up the video file to be played
-	//libVLC wants an absolute path, so we will figure out the project directory
-	char *bpath = SDL_GetBasePath();
-	std::string basepath;
-	basepath.assign(bpath);
-	//std::cerr << "BasePath: " << basepath.c_str() << std::endl;
-	basepath.erase(basepath.rfind("\\"),1); //get rid of the last slash in the path
-	basepath.erase(basepath.rfind("\\")+1,10); //get rid of the "Debug" folder name to get to the project folder
-	//std::cerr << "ModBasePath: " << basepath.c_str() << std::endl;
-
-	std::stringstream vidpath;
-	int d = 0;
-	vidpath << basepath.c_str() << VIDEOPATH << fname; //"\\Video" << d << ".divx";
-	std::cerr << "VidPath: " << vidpath.str().c_str() << std::endl;
-
-	//check if the path exists. For some reason libVLC doesn't do this check correctly so we have to do it manually!
-	if (!PathFileExistsA(vidpath.str().c_str()))
-	{
-		std::cerr << "Video file/path does not exist." << std::endl;
-		status = 5;
-		isValid = 0;
-		return(status);
-	}
-
-	//open the video file
-	m = libvlc_media_new_path(libvlc, vidpath.str().c_str());
-	if (m == NULL)
-	{
-		std::cerr << "Media path not valid." << std::endl;
-		status = 6;
-		isValid = 0;
-		return(status);
-	}
-	//else
-		//std::cerr << "Media path: " << m << std::endl;
-
-    mp = libvlc_media_player_new_from_media(m);
-	if (mp == NULL)
-	{
-		std::cerr << "Media Player not created." << std::endl;
-		status = 7;
-		isValid = 0;
-		return(status);
-	}
-
-    libvlc_media_release(m);
-
-	libvlc_video_set_scale(mp,1.5);		
-
-    libvlc_video_set_callbacks(mp, lock, unlock, display, &context);
-
-    libvlc_video_set_format(mp, "RV16", w, h, w*2);
-
-	mpevent = libvlc_media_player_event_manager(mp);
-	ResetStatus();
-	GetStatus();
-
-	Invisible();  //make the window invisible until we need it
+	//std::cerr << "Video State: " << libvlc_media_get_state(m) << std::endl;
 
 	return(0);
-}
-
-
-int Video::LoadNewVid(const char* fname)
-{
-	int status;
-
-	requestload = 1;
-	status = VidLoad(fname);
-
-	if (status != 0)
-		isValid = 0;
-
-	//requestload = 0;
-
-	return(status);
 
 }
+
 
 void Video::Visible()
 {
@@ -974,17 +815,3 @@ void Video::CleanUp()
 	SDL_DestroyWindow(context.window);
 
 }
-
-
-
-/*
-//callback to detect when the video has stopped playing
-int VidIsPlaying;
-void videoEnded(const libvlc_event_t *event, void *vidPlaying)
-{
-	std::cerr << "VideoEnd callback (" << vidPlaying << "):(";
-	*vidPlaying = 0;
-	std::cerr << vidPlaying << "):  ";
-
-}
-*/

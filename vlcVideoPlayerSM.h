@@ -100,8 +100,6 @@ private:
 	int hasEnded;
 	int hasStopped;
 
-	int VidLoad(const char* fname);
-	
 	int isValid;  //flag to identify that the video is actually valid!
 	int isVisible;
 	Uint32 visTime;
